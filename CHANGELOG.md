@@ -4,6 +4,31 @@ All notable changes are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project
 uses [Semantic Versioning](https://semver.org/).
 
+## [1.0.2] — SIEM-friendly audit log
+
+### Added
+
+- `internal/audit/` — new package emitting security-relevant events as
+  ECS 8.x-compatible JSON lines. Natively parsed by Elastic, Splunk,
+  Datadog, Sumo, Wazuh, Loki, etc.
+- 10 event types: `server.started`, `server.stopped`,
+  `auth.login_failure`, `target.added`, `target.deleted`,
+  `target.scan_requested`, `scan.started`, `scan.completed`,
+  `scan.failed`, `alert.configured`, `alert.unconfigured`,
+  `alert.delivered`, `alert.delivery_failed`.
+- `-audit-log <path>` flag and `FIPSCAN_AUDIT_LOG` env var. File
+  opened `0o640` (owner rw, group r — typical for SIEM agent
+  ingestion). Atomic per-line writes via `O_APPEND` semantics.
+- Docker image enables audit by default at
+  `/var/lib/fipscan/audit.log` so the log lives in the persisted
+  volume.
+- Each event carries: `@timestamp`, `event.{id,kind,category,type,action,outcome}`,
+  `service.{name,version,type}`, `host.hostname`, and where relevant
+  `source.ip`, `user.name`, plus a namespaced `fipscan.*` block with
+  product-specific detail (target, scan, findings, alert).
+- Source IP attribution uses `RemoteAddr` only — `X-Forwarded-For` is
+  deliberately NOT trusted (would let any client spoof audit-log IPs).
+
 ## [1.0.1] — runtime FIPS-mode enforcement
 
 ### Changed

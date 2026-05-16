@@ -6,16 +6,31 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/rbuilta/fipscan/internal/audit"
 )
 
 type handlers struct {
 	store   *Store
 	sched   *Scheduler
 	version string
+	audit   *audit.Logger
 }
 
-func newHandlers(s *Store, sc *Scheduler, version string) *handlers {
-	return &handlers{store: s, sched: sc, version: version}
+func newHandlers(s *Store, sc *Scheduler, version string, auditor *audit.Logger) *handlers {
+	if auditor == nil {
+		auditor = audit.NopLogger()
+	}
+	return &handlers{store: s, sched: sc, version: version, audit: auditor}
+}
+
+// actor returns the authenticated username (if Basic auth set) and the
+// source IP for an HTTP request. Both empty-string-safe.
+func (h *handlers) actor(r *http.Request) (user, ip string) {
+	if u, _, ok := r.BasicAuth(); ok {
+		user = u
+	}
+	return user, clientIP(r)
 }
 
 func (h *handlers) registerRoutes(mux *http.ServeMux) {
@@ -95,6 +110,8 @@ func (h *handlers) targetNew(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		user, ip := h.actor(r)
+		h.audit.Emit(audit.TargetAdded(t.ID, string(t.Type), t.Value, ip, user))
 		h.sched.RequestScan(t.ID)
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
@@ -114,6 +131,8 @@ func (h *handlers) targetRouter(w http.ResponseWriter, r *http.Request) {
 	case len(parts) == 1:
 		h.targetShow(w, r, id)
 	case len(parts) == 2 && parts[1] == "scan" && r.Method == http.MethodPost:
+		user, ip := h.actor(r)
+		h.audit.Emit(audit.TargetScanRequested(id, ip, user))
 		h.sched.RequestScan(id)
 		http.Redirect(w, r, "/targets/"+id, http.StatusSeeOther)
 	case len(parts) == 2 && parts[1] == "delete" && r.Method == http.MethodPost:
@@ -121,6 +140,8 @@ func (h *handlers) targetRouter(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		user, ip := h.actor(r)
+		h.audit.Emit(audit.TargetDeleted(id, ip, user))
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	default:
 		http.NotFound(w, r)
@@ -205,10 +226,13 @@ func (h *handlers) alertNew(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "url must begin with http:// or https://", http.StatusBadRequest)
 			return
 		}
-		if _, err := h.store.AddAlert(a); err != nil {
+		added, err := h.store.AddAlert(a)
+		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		user, ip := h.actor(r)
+		h.audit.Emit(audit.AlertConfigured(added.ID, added.Name, ip, user))
 		http.Redirect(w, r, "/alerts", http.StatusSeeOther)
 		return
 	}
@@ -229,6 +253,8 @@ func (h *handlers) alertRouter(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		user, ip := h.actor(r)
+		h.audit.Emit(audit.AlertUnconfigured(id, ip, user))
 		http.Redirect(w, r, "/alerts", http.StatusSeeOther)
 	case len(parts) == 2 && parts[1] == "test" && r.Method == http.MethodPost:
 		h.alertTest(w, r, id)
@@ -250,7 +276,7 @@ func (h *handlers) alertTest(w http.ResponseWriter, r *http.Request, id string) 
 		http.NotFound(w, r)
 		return
 	}
-	postAlert(a, testPayload())
+	postAlert(a, testPayload(), h.audit)
 	if strings.Contains(r.Header.Get("Accept"), "application/json") {
 		writeJSON(w, 202, map[string]string{"status": "test queued"})
 		return
@@ -304,6 +330,8 @@ func (h *handlers) apiTargets(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, 500, apiError{err.Error()})
 			return
 		}
+		user, ip := h.actor(r)
+		h.audit.Emit(audit.TargetAdded(t.ID, string(t.Type), t.Value, ip, user))
 		h.sched.RequestScan(t.ID)
 		writeJSON(w, 201, t)
 	default:
@@ -336,6 +364,8 @@ func (h *handlers) apiTargetItem(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, 500, apiError{err.Error()})
 			return
 		}
+		user, ip := h.actor(r)
+		h.audit.Emit(audit.TargetDeleted(id, ip, user))
 		w.WriteHeader(204)
 	case len(parts) == 2 && parts[1] == "scans" && r.Method == http.MethodGet:
 		scans, err := h.store.ListScansForTarget(id)
@@ -345,6 +375,8 @@ func (h *handlers) apiTargetItem(w http.ResponseWriter, r *http.Request) {
 		}
 		writeJSON(w, 200, scans)
 	case len(parts) == 2 && parts[1] == "scan" && r.Method == http.MethodPost:
+		user, ip := h.actor(r)
+		h.audit.Emit(audit.TargetScanRequested(id, ip, user))
 		h.sched.RequestScan(id)
 		writeJSON(w, 202, map[string]string{"status": "scan queued"})
 	default:
@@ -376,6 +408,8 @@ func (h *handlers) apiAlerts(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, 500, apiError{err.Error()})
 			return
 		}
+		user, ip := h.actor(r)
+		h.audit.Emit(audit.AlertConfigured(a.ID, a.Name, ip, user))
 		writeJSON(w, 201, a)
 	default:
 		writeJSON(w, 405, apiError{"method not allowed"})
@@ -396,6 +430,8 @@ func (h *handlers) apiAlertItem(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, 500, apiError{err.Error()})
 			return
 		}
+		user, ip := h.actor(r)
+		h.audit.Emit(audit.AlertUnconfigured(id, ip, user))
 		w.WriteHeader(204)
 	case len(parts) == 2 && parts[1] == "test" && r.Method == http.MethodPost:
 		a, ok, err := h.store.GetAlert(id)
@@ -407,7 +443,7 @@ func (h *handlers) apiAlertItem(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, 404, apiError{"not found"})
 			return
 		}
-		postAlert(a, testPayload())
+		postAlert(a, testPayload(), h.audit)
 		writeJSON(w, 202, map[string]string{"status": "test queued"})
 	default:
 		writeJSON(w, 405, apiError{"method not allowed"})

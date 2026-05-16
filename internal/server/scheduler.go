@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rbuilta/fipscan/internal/audit"
 	"github.com/rbuilta/fipscan/internal/container"
 	"github.com/rbuilta/fipscan/internal/deps"
 	"github.com/rbuilta/fipscan/internal/findings"
@@ -23,6 +24,7 @@ type Scheduler struct {
 	store     *Store
 	interval  time.Duration
 	publicURL string
+	audit     *audit.Logger
 	log       *log.Logger
 
 	mu      sync.Mutex
@@ -30,11 +32,15 @@ type Scheduler struct {
 	manual  chan string     // manual scan requests by target ID
 }
 
-func NewScheduler(s *Store, interval time.Duration, publicURL string) *Scheduler {
+func NewScheduler(s *Store, interval time.Duration, publicURL string, auditor *audit.Logger) *Scheduler {
+	if auditor == nil {
+		auditor = audit.NopLogger()
+	}
 	return &Scheduler{
 		store:     s,
 		interval:  interval,
 		publicURL: publicURL,
+		audit:     auditor,
 		log:       log.New(os.Stderr, "[scheduler] ", log.LstdFlags),
 		running:   map[string]bool{},
 		manual:    make(chan string, 16),
@@ -111,16 +117,22 @@ func (sc *Scheduler) scanOne(ctx context.Context, id string) {
 		TargetID:  t.ID,
 		StartedAt: time.Now().UTC(),
 	}
+	sc.audit.Emit(audit.ScanStarted(t.ID, string(t.Type), t.Value, rec.ID))
+
 	results, err := executeScan(t)
 	rec.Duration = time.Since(rec.StartedAt)
+	durMS := rec.Duration.Milliseconds()
 	if err != nil {
 		rec.Error = err.Error()
 		sc.log.Printf("scan FAILED: %s — %v", t.Value, err)
+		sc.audit.Emit(audit.ScanFailed(t.ID, string(t.Type), t.Value, rec.ID, durMS, err.Error()))
 	} else {
 		rec.Findings = results
 		rec.Summary = summarise(results)
 		sc.log.Printf("scan ok: %s — %d findings (H:%d M:%d L:%d)",
 			t.Value, rec.Summary.Total, rec.Summary.High, rec.Summary.Medium, rec.Summary.Low)
+		sc.audit.Emit(audit.ScanCompleted(t.ID, string(t.Type), t.Value, rec.ID, durMS,
+			rec.Summary.Total, rec.Summary.High, rec.Summary.Medium, rec.Summary.Low))
 	}
 
 	if err := sc.store.SaveScan(rec); err != nil {
@@ -131,7 +143,7 @@ func (sc *Scheduler) scanOne(ctx context.Context, id string) {
 		sc.log.Printf("update target %s: %v", t.ID, err)
 	}
 
-	dispatchAlerts(sc.store, t, rec, prevScanID, sc.publicURL)
+	dispatchAlerts(sc.store, t, rec, prevScanID, sc.publicURL, sc.audit)
 }
 
 // executeScan dispatches to the correct backend based on the target type.

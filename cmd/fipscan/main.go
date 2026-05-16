@@ -27,7 +27,7 @@ import (
 	"github.com/rbuilta/fipscan/internal/source"
 )
 
-const version = "1.0.1"
+const version = "1.0.2"
 
 // knownSubcommands is the dispatch table for `fipscan <subcommand> ...`.
 // Back-compat: if the first argument starts with "-" or is absent, the
@@ -226,6 +226,7 @@ func runServer(args []string) {
 	authUser := fs.String("auth-user", "admin", "Username for HTTP Basic auth (when -auth-password-hash is set)")
 	authHash := fs.String("auth-password-hash", "", "PBKDF2 password hash for HTTP Basic auth (or set FIPSCAN_AUTH_PASSWORD_HASH). Generate with `fipscan hash-password`.")
 	publicURL := fs.String("public-url", "", "Externally visible base URL (e.g. https://fipscan.example.com). Embedded in alert payloads so clickable scan-detail links work.")
+	auditLog := fs.String("audit-log", "", "Path to SIEM-friendly JSONL audit log (ECS 8.x). Or set FIPSCAN_AUDIT_LOG. Empty = audit events go to stderr.")
 	_ = fs.Parse(args)
 
 	hash := *authHash
@@ -239,6 +240,10 @@ func runServer(args []string) {
 	if pubURL == "" {
 		pubURL = os.Getenv("FIPSCAN_PUBLIC_URL")
 	}
+	auditPath := *auditLog
+	if auditPath == "" {
+		auditPath = os.Getenv("FIPSCAN_AUDIT_LOG")
+	}
 
 	if err := server.Run(server.Config{
 		Listen:           *listen,
@@ -248,6 +253,7 @@ func runServer(args []string) {
 		AuthUser:         *authUser,
 		AuthPasswordHash: hash,
 		PublicURL:        pubURL,
+		AuditLogPath:     auditPath,
 	}); err != nil {
 		fmt.Fprintf(os.Stderr, "server error: %v\n", err)
 		os.Exit(1)

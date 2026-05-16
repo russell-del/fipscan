@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/rbuilta/fipscan/internal/audit"
 )
 
 // PBKDF2 parameters. SHA-256 + 600k iterations follows the current OWASP
@@ -82,9 +84,11 @@ func VerifyPassword(stored, password string) (bool, error) {
 // localhost). Otherwise every request must carry valid HTTP Basic
 // credentials.
 //
-// The username defaults to "admin"; the password (after PBKDF2 verify)
-// must match the configured hash.
-func basicAuth(username, passwordHash string, h http.Handler) http.Handler {
+// Failed login attempts are emitted to the audit logger as
+// `auth.login_failure` events with source IP and the attempted
+// username; successful logins are not per-request logged (use the
+// existing accessLog middleware for that).
+func basicAuth(username, passwordHash string, auditor *audit.Logger, h http.Handler) http.Handler {
 	if passwordHash == "" {
 		return h
 	}
@@ -94,13 +98,22 @@ func basicAuth(username, passwordHash string, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		u, p, ok := r.BasicAuth()
 		if !ok {
+			if auditor != nil {
+				auditor.Emit(audit.LoginFailure("", clientIP(r), "no credentials"))
+			}
 			unauthorized(w)
 			return
 		}
-		// Username compared in constant time too, to avoid leaking length.
 		userOK := subtle.ConstantTimeCompare([]byte(u), []byte(username)) == 1
 		passOK, _ := VerifyPassword(passwordHash, p)
 		if !userOK || !passOK {
+			if auditor != nil {
+				reason := "wrong password"
+				if !userOK {
+					reason = "unknown user"
+				}
+				auditor.Emit(audit.LoginFailure(u, clientIP(r), reason))
+			}
 			unauthorized(w)
 			return
 		}

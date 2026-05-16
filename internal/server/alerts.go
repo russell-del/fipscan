@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rbuilta/fipscan/internal/audit"
 	"github.com/rbuilta/fipscan/internal/findings"
 )
 
@@ -45,7 +46,7 @@ var alertLogger = log.New(os.Stderr, "[alerts] ", log.LstdFlags)
 //
 // publicURL, when non-empty, is prefixed to the per-scan URL embedded in
 // the payload so receivers can click through to the scan-detail page.
-func dispatchAlerts(store *Store, target Target, rec ScanRecord, prevScanID, publicURL string) {
+func dispatchAlerts(store *Store, target Target, rec ScanRecord, prevScanID, publicURL string, auditor *audit.Logger) {
 	if rec.Error != "" || len(rec.Findings) == 0 {
 		return
 	}
@@ -95,14 +96,17 @@ func dispatchAlerts(store *Store, target Target, rec ScanRecord, prevScanID, pub
 			Summary:          rec.Summary,
 			GeneratedAt:      time.Now().UTC(),
 		}
-		go postAlert(d, payload)
+		go postAlert(d, payload, auditor)
 	}
 }
 
-func postAlert(d AlertDestination, payload AlertPayload) {
+func postAlert(d AlertDestination, payload AlertPayload, auditor *audit.Logger) {
 	body, err := json.Marshal(payload)
 	if err != nil {
 		alertLogger.Printf("marshal payload for %s: %v", d.Name, err)
+		if auditor != nil {
+			auditor.Emit(audit.AlertDeliveryFailed(d.ID, d.Name, payload.ScanID, "marshal: "+err.Error()))
+		}
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -110,22 +114,35 @@ func postAlert(d AlertDestination, payload AlertPayload) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, d.URL, bytes.NewReader(body))
 	if err != nil {
 		alertLogger.Printf("build request for %s: %v", d.Name, err)
+		if auditor != nil {
+			auditor.Emit(audit.AlertDeliveryFailed(d.ID, d.Name, payload.ScanID, err.Error()))
+		}
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "fipscan/0.7")
+	req.Header.Set("User-Agent", "fipscan/1.0")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		alertLogger.Printf("POST %s: %v", d.Name, err)
+		if auditor != nil {
+			auditor.Emit(audit.AlertDeliveryFailed(d.ID, d.Name, payload.ScanID, err.Error()))
+		}
 		return
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
 		alertLogger.Printf("POST %s: HTTP %d", d.Name, resp.StatusCode)
+		if auditor != nil {
+			auditor.Emit(audit.AlertDeliveryFailed(d.ID, d.Name, payload.ScanID,
+				fmt.Sprintf("HTTP %d", resp.StatusCode)))
+		}
 		return
 	}
 	alertLogger.Printf("delivered to %s (%d new findings, scan %s)",
 		d.Name, payload.NewFindingsCount, payload.ScanID[:8])
+	if auditor != nil {
+		auditor.Emit(audit.AlertDelivered(d.ID, d.Name, payload.ScanID, payload.NewFindingsCount))
+	}
 }
 
 // diffFindings returns findings in current that aren't present in

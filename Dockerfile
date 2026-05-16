@@ -70,5 +70,10 @@ WORKDIR /var/lib/fipscan
 VOLUME ["/var/lib/fipscan"]
 EXPOSE 8080
 
+# Audit log on by default in the image — lives inside the persisted
+# volume so it survives container restarts. Operators can override by
+# setting FIPSCAN_AUDIT_LOG to "" or another path.
+ENV FIPSCAN_AUDIT_LOG=/var/lib/fipscan/audit.log
+
 ENTRYPOINT ["/usr/local/bin/fipscan"]
 CMD ["server", "-listen", "0.0.0.0:8080", "-data", "/var/lib/fipscan"]

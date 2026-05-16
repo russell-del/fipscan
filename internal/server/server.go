@@ -4,12 +4,15 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/rbuilta/fipscan/internal/audit"
 )
 
 // Config controls the server runtime.
@@ -21,6 +24,7 @@ type Config struct {
 	AuthUser         string // HTTP Basic username (default "admin")
 	AuthPasswordHash string // empty = no auth; only allowed for localhost binds
 	PublicURL        string // e.g. "https://fipscan.internal.example.com" — embedded in alert payloads
+	AuditLogPath     string // empty = audit events go to stderr; set a path to write SIEM-friendly JSONL
 }
 
 // Run is the entry point invoked by `fipscan server`. It builds the
@@ -42,11 +46,17 @@ func Run(cfg Config) error {
 			cfg.Listen)
 	}
 
+	auditor, err := audit.New(cfg.AuditLogPath, cfg.Version, "fipscan-server")
+	if err != nil {
+		return fmt.Errorf("init audit log: %w", err)
+	}
+	defer auditor.Close()
+
 	store, err := NewStore(cfg.DataDir)
 	if err != nil {
 		return fmt.Errorf("init storage: %w", err)
 	}
-	sched := NewScheduler(store, cfg.Interval, cfg.PublicURL)
+	sched := NewScheduler(store, cfg.Interval, cfg.PublicURL, auditor)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
@@ -54,11 +64,11 @@ func Run(cfg Config) error {
 	go sched.Run(ctx)
 
 	mux := http.NewServeMux()
-	h := newHandlers(store, sched, cfg.Version)
+	h := newHandlers(store, sched, cfg.Version, auditor)
 	h.registerRoutes(mux)
 
 	var handler http.Handler = mux
-	handler = basicAuth(cfg.AuthUser, cfg.AuthPasswordHash, handler)
+	handler = basicAuth(cfg.AuthUser, cfg.AuthPasswordHash, auditor, handler)
 	handler = accessLog(handler)
 
 	srv := &http.Server{
@@ -72,8 +82,13 @@ func Run(cfg Config) error {
 	if cfg.AuthPasswordHash != "" {
 		authState = "HTTP Basic auth as user=" + cfg.AuthUser
 	}
-	logger.Printf("fipscan %s — listening on http://%s  (data: %s, scan interval: %s, %s)",
-		cfg.Version, cfg.Listen, cfg.DataDir, cfg.Interval, authState)
+	auditPath := auditor.Path()
+	if auditPath == "" {
+		auditPath = "stderr"
+	}
+	logger.Printf("fipscan %s — listening on http://%s  (data: %s, scan interval: %s, %s, audit: %s)",
+		cfg.Version, cfg.Listen, cfg.DataDir, cfg.Interval, authState, auditPath)
+	auditor.Emit(audit.ServerStarted(cfg.Listen, cfg.AuthPasswordHash != ""))
 
 	errCh := make(chan error, 1)
 	go func() {
@@ -87,10 +102,25 @@ func Run(cfg Config) error {
 		return err
 	case <-ctx.Done():
 		logger.Println("shutting down...")
+		auditor.Emit(audit.ServerStopped())
 		shutCtx, shutCancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer shutCancel()
 		return srv.Shutdown(shutCtx)
 	}
+}
+
+// clientIP returns the best-effort source IP for an HTTP request. Falls
+// back to RemoteAddr if no trustworthy proxy header is present.
+//
+// We deliberately do NOT honour X-Forwarded-For unless a future
+// -trust-proxy-headers flag is added — trusting it by default would let
+// any client spoof the recorded source IP in the audit log.
+func clientIP(r *http.Request) string {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return host
 }
 
 // accessLog is a tiny middleware that emits one line per request to
