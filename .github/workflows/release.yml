@@ -1,0 +1,111 @@
+# Release workflow — fires on a v* tag push.
+#
+# Produces:
+#   • FIPS-built binaries for linux/{amd64,arm64} · darwin/{amd64,arm64} · windows/amd64
+#   • CycloneDX SBOM + SHA256SUMS
+#   • cosign keyless signatures (via GitHub Actions OIDC) for every artifact
+#   • Multi-arch Docker image at ghcr.io/<owner>/fipscan:<version>
+#   • GitHub Release with notes auto-generated from CHANGELOG.md
+#
+# Required repo settings:
+#   • Actions → workflow permissions → "Read and write permissions" + id-token write
+#   • Packages → enable GHCR for the repo (default on)
+
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write   # create GitHub release + upload artifacts
+  id-token: write   # cosign keyless OIDC signing
+  packages: write   # push to GHCR
+
+jobs:
+  binaries:
+    name: Build, sign & release binaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.3'
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Verify dogfood passes
+        run: make dogfood
+
+      - name: Reproducibility check
+        run: make reproducibility-check
+
+      - name: Cross-platform binaries (FIPS)
+        run: make release-matrix
+
+      - name: SBOM (CycloneDX)
+        run: make sbom
+
+      - name: SHA256SUMS
+        run: make checksums
+
+      - name: Sign all artifacts with cosign (keyless)
+        run: |
+          cd dist
+          for f in fipscan-*; do
+            cosign sign-blob --yes --output-signature "$f.sig" --output-certificate "$f.crt" "$f"
+          done
+          cosign sign-blob --yes --output-signature fipscan-${{ github.ref_name }}.cdx.json.sig \
+                           --output-certificate fipscan-${{ github.ref_name }}.cdx.json.crt \
+                           fipscan-${{ github.ref_name }}.cdx.json || true
+
+      - name: Generate Homebrew formula
+        run: make homebrew-formula
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          body_path: CHANGELOG.md
+          files: |
+            dist/fipscan-*
+            dist/SHA256SUMS
+            dist/fipscan.rb
+
+  image:
+    name: Build & push multi-arch Docker image
+    runs-on: ubuntu-latest
+    needs: binaries
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Build & push multi-arch image
+        id: buildpush
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/fipscan:${{ github.ref_name }}
+            ghcr.io/${{ github.repository_owner }}/fipscan:latest
+
+      - name: Sign image with cosign (keyless)
+        env:
+          DIGEST: ${{ steps.buildpush.outputs.digest }}
+        run: |
+          cosign sign --yes "ghcr.io/${{ github.repository_owner }}/fipscan@${DIGEST}"

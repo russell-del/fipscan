@@ -1,0 +1,19 @@
+/bin/
+/dist/
+/fipscan-data/
+/vendor/
+
+# Editor / OS noise
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# Scan outputs (developers may dump these to repo root)
+*.sarif
+fipscan.json
+
+# Local docker compose state
+docker-compose.override.yml
+.env

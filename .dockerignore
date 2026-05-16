@@ -1,0 +1,12 @@
+# Don't ship dev artifacts into the build context.
+bin/
+dist/
+fipscan-data/
+*.sarif
+*.json
+.git
+.github
+.idea
+.vscode
+testdata/        # not needed at runtime; the catalog ships with the binary
+*.md

@@ -1,0 +1,52 @@
+{{define "content"}}
+<section>
+  <div class="section-head">
+    <h2>
+      <span class="pill pill-{{.Target.Type}}">{{.Target.Type}}</span>
+      {{.Target.Value}}
+      {{if .Target.Ref}}<small>@{{.Target.Ref}}</small>{{end}}
+    </h2>
+    <div class="actions">
+      <form action="/targets/{{.Target.ID}}/scan" method="post" class="inline">
+        <button type="submit" class="btn btn-primary">Scan now</button>
+      </form>
+      <form action="/targets/{{.Target.ID}}/delete" method="post" class="inline"
+            onsubmit="return confirm('Remove this target from the watchlist?');">
+        <button type="submit" class="btn btn-danger">Delete</button>
+      </form>
+    </div>
+  </div>
+
+  <dl class="meta">
+    <dt>Added</dt><dd>{{.Target.AddedAt.Format "2006-01-02 15:04 MST"}}</dd>
+    {{if .Target.Platform}}<dt>Platform</dt><dd>{{.Target.Platform}}</dd>{{end}}
+    {{if .Target.LastScan}}<dt>Last scan</dt><dd>{{.Target.LastScan.Format "2006-01-02 15:04 MST"}}</dd>{{end}}
+  </dl>
+
+  <h3>Scan history</h3>
+  {{if .Scans}}
+  <table class="scans">
+    <thead>
+      <tr><th>Started</th><th>Duration</th><th class="num">Total</th><th class="num">High</th><th class="num">Medium</th><th class="num">Low</th><th></th></tr>
+    </thead>
+    <tbody>
+      {{range .Scans}}
+      <tr>
+        <td><a href="/scans/{{.ID}}">{{.StartedAt.Format "2006-01-02 15:04 MST"}}</a>
+          {{if .Error}}<span class="sev-error">error</span>{{end}}
+        </td>
+        <td>{{.Duration}}</td>
+        <td class="num">{{.Summary.Total}}</td>
+        <td class="num sev-high">{{.Summary.High}}</td>
+        <td class="num sev-medium">{{.Summary.Medium}}</td>
+        <td class="num sev-low">{{.Summary.Low}}</td>
+        <td><a href="/scans/{{.ID}}" class="btn btn-small">Details</a></td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else}}
+  <p class="muted">No scans yet — one is in progress or pending.</p>
+  {{end}}
+</section>
+{{end}}

@@ -1,0 +1,12 @@
+# Sample requirements.txt with FIPS-relevant deps mixed in
+django==4.2.7
+requests>=2.31.0
+pycrypto==2.6.1                  # abandoned, weak — should fire
+pycryptodome==3.19.0             # not FIPS-validated — should fire
+bcrypt==4.0.1                    # blowfish-based — should fire
+cryptography==41.0.7             # FIPS posture depends on build — should fire
+m2crypto==0.39.0                 # depends on system OpenSSL — should fire
+passlib[bcrypt]==1.7.4           # supports non-FIPS hashes — should fire
+sqlalchemy==2.0.25
+pytest>=7.0; python_version>='3.10'
+-r requirements-dev.txt          # directive, must be ignored

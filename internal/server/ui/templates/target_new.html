@@ -1,0 +1,43 @@
+{{define "content"}}
+<section>
+  <h2>Add target</h2>
+  <form method="post" action="/targets/new" class="form">
+    <fieldset>
+      <legend>Type</legend>
+      <label class="radio">
+        <input type="radio" name="type" value="repo" checked>
+        <span><strong>Git repository</strong> — clone via GitHub API and scan source + dependency manifests.</span>
+      </label>
+      <label class="radio">
+        <input type="radio" name="type" value="image">
+        <span><strong>Container image</strong> — pull manifest + layers from any OCI registry and scan.</span>
+      </label>
+    </fieldset>
+
+    <label>
+      <span>Value</span>
+      <input type="text" name="value" required
+             placeholder="owner/name  OR  registry/image:tag"
+             autofocus>
+      <small>For repos: <code>octocat/Hello-World</code>. For images: <code>alpine:3.19</code>, <code>gcr.io/distroless/python3-debian12</code>, <code>registry.access.redhat.com/ubi9/ubi-minimal:latest</code>.</small>
+    </label>
+
+    <details class="advanced">
+      <summary>Advanced</summary>
+      <label>
+        <span>Git ref (repos only)</span>
+        <input type="text" name="ref" placeholder="main  /  v1.2.3  /  abc1234">
+      </label>
+      <label>
+        <span>Platform (images only)</span>
+        <input type="text" name="platform" placeholder="linux/amd64" value="linux/amd64">
+      </label>
+    </details>
+
+    <div class="actions">
+      <button type="submit" class="btn btn-primary">Add target &amp; scan now</button>
+      <a href="/" class="btn">Cancel</a>
+    </div>
+  </form>
+</section>
+{{end}}

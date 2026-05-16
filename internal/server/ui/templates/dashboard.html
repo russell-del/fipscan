@@ -1,0 +1,56 @@
+{{define "content"}}
+<section>
+  <div class="section-head">
+    <h2>Watchlist</h2>
+    <a class="btn btn-primary" href="/targets/new">Add target</a>
+  </div>
+
+  {{if .Rows}}
+  <table class="watchlist">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Target</th>
+        <th>Last scan</th>
+        <th class="num">Findings</th>
+        <th class="num">High</th>
+        <th class="num">Medium</th>
+        <th class="num">Low</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Rows}}
+      <tr>
+        <td><span class="pill pill-{{.Target.Type}}">{{.Target.Type}}</span></td>
+        <td><a href="/targets/{{.Target.ID}}">{{.Target.Value}}</a>
+          {{if .Target.Ref}}<small>@{{.Target.Ref}}</small>{{end}}
+          {{if .Target.Platform}}<small>({{.Target.Platform}})</small>{{end}}
+        </td>
+        <td>
+          {{if .Scan}}
+            <a href="/scans/{{.Scan.ID}}">{{.Scan.StartedAt.Format "2006-01-02 15:04 MST"}}</a>
+            {{if .Scan.Error}}<span class="sev-error">error</span>{{end}}
+          {{else}}<span class="muted">never</span>{{end}}
+        </td>
+        <td class="num">{{if .Scan}}{{.Scan.Summary.Total}}{{else}}—{{end}}</td>
+        <td class="num sev-high">{{if .Scan}}{{.Scan.Summary.High}}{{else}}—{{end}}</td>
+        <td class="num sev-medium">{{if .Scan}}{{.Scan.Summary.Medium}}{{else}}—{{end}}</td>
+        <td class="num sev-low">{{if .Scan}}{{.Scan.Summary.Low}}{{else}}—{{end}}</td>
+        <td>
+          <form action="/targets/{{.Target.ID}}/scan" method="post" class="inline">
+            <button type="submit" class="btn btn-small">Scan now</button>
+          </form>
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else}}
+  <div class="empty">
+    <p>No targets yet.</p>
+    <p><a class="btn btn-primary" href="/targets/new">Add your first target</a></p>
+  </div>
+  {{end}}
+</section>
+{{end}}

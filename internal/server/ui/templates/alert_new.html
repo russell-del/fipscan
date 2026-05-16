@@ -1,0 +1,59 @@
+{{define "content"}}
+<section>
+  <h2>Add alert destination</h2>
+  <form method="post" action="/alerts/new" class="form">
+    <label>
+      <span>Name</span>
+      <input type="text" name="name" required autofocus
+             placeholder="Slack #security  /  ops-pagerduty  /  internal-webhook">
+    </label>
+
+    <label>
+      <span>Webhook URL</span>
+      <input type="text" name="url" required
+             placeholder="https://hooks.slack.com/services/T.../B.../XXX">
+      <small>
+        <strong>Slack:</strong> incoming-webhook URL from a Slack app.
+        <strong>Teams:</strong> the channel's incoming-webhook connector URL.
+        <strong>Generic:</strong> any HTTPS endpoint that accepts a JSON POST.
+      </small>
+    </label>
+
+    <fieldset>
+      <legend>Minimum severity</legend>
+      <label class="radio">
+        <input type="radio" name="min_severity" value="HIGH" checked>
+        <span><strong>HIGH only</strong> — disallowed algorithms (MD5, DES, RC4, RSA &lt;2048, etc.). Lowest noise.</span>
+      </label>
+      <label class="radio">
+        <input type="radio" name="min_severity" value="MEDIUM">
+        <span><strong>MEDIUM and above</strong> — also restricted algorithms (SHA-1, non-FIPS-activated providers).</span>
+      </label>
+      <label class="radio">
+        <input type="radio" name="min_severity" value="LOW">
+        <span><strong>All findings</strong> — including informational signals (FIPS-validated provider present, etc.).</span>
+      </label>
+    </fieldset>
+
+    <div class="actions">
+      <button type="submit" class="btn btn-primary">Add destination</button>
+      <a href="/alerts" class="btn">Cancel</a>
+    </div>
+  </form>
+
+  <details class="advanced">
+    <summary>What gets POSTed</summary>
+    <p>JSON payload, including a Slack/Teams-compatible <code>text</code> field plus the structured detail any receiver can parse:</p>
+<pre>{
+  "alert_type": "new_findings",
+  "text": "fipscan: 2 new HIGH finding(s) on alpine:3.19 (image) ...",
+  "target":  { "type": "image", "value": "alpine:3.19", ... },
+  "scan_id": "...",
+  "scan_url": "https://fipscan.example.com/scans/...",
+  "new_findings_count": 2,
+  "new_findings": [ {"severity":"HIGH","rule":"FIPS-HASH-001","algorithm":"MD5", ...} ],
+  "summary": { "total": 8, "high": 2, "medium": 5, "low": 1 }
+}</pre>
+  </details>
+</section>
+{{end}}

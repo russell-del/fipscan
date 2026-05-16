@@ -1,0 +1,55 @@
+# CI — runs on every push & PR. Cheap, fast checks.
+# Heavy lifting (release matrix, signing, image publish) lives in release.yml.
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.3'
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: gofmt check
+        run: |
+          out=$(gofmt -l .)
+          if [ -n "$out" ]; then
+            echo "::error::files not gofmt'd:"
+            echo "$out"
+            exit 1
+          fi
+
+      - name: Build
+        run: go build ./...
+
+      - name: Build FIPS binary + verify FIPS module linked
+        run: |
+          mkdir -p bin
+          CGO_ENABLED=0 GOFIPS140=v1.0.0 go build -trimpath -buildvcs=false -ldflags="-s -w" -o bin/fipscan ./cmd/fipscan
+          out=$(./bin/fipscan -version)
+          echo "$out"
+          echo "$out" | grep -q 'fips140-module: v1.0.0' || (echo "FIPS module missing" >&2; exit 1)
+
+      - name: Dogfood (fipscan scans its own source)
+        run: make dogfood
+
+      - name: Smoke-test image scan against alpine:3.19
+        run: ./bin/fipscan -image alpine:3.19 -format json | grep -q '"total":'
+
+      - name: Smoke-test docker build
+        run: docker build -t fipscan:ci .

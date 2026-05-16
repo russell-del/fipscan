@@ -1,0 +1,55 @@
+{{define "content"}}
+<section>
+  <div class="section-head">
+    <h2>Scan {{shortID .Scan.ID}}</h2>
+    <div>
+      <a href="/targets/{{.Target.ID}}" class="btn">← Back to target</a>
+    </div>
+  </div>
+
+  <dl class="meta">
+    <dt>Target</dt><dd>
+      <span class="pill pill-{{.Target.Type}}">{{.Target.Type}}</span>
+      <a href="/targets/{{.Target.ID}}">{{.Target.Value}}</a>
+    </dd>
+    <dt>Started</dt><dd>{{.Scan.StartedAt.Format "2006-01-02 15:04:05 MST"}}</dd>
+    <dt>Duration</dt><dd>{{.Scan.Duration}}</dd>
+    <dt>Findings</dt><dd>
+      <strong>{{.Scan.Summary.Total}}</strong>
+      <span class="sev-high">{{.Scan.Summary.High}} HIGH</span>
+      <span class="sev-medium">{{.Scan.Summary.Medium}} MEDIUM</span>
+      <span class="sev-low">{{.Scan.Summary.Low}} LOW</span>
+    </dd>
+    {{if .Scan.Error}}<dt>Error</dt><dd class="sev-error">{{.Scan.Error}}</dd>{{end}}
+  </dl>
+
+  {{if .Scan.Findings}}
+  <h3>Findings</h3>
+  <table class="findings">
+    <thead>
+      <tr><th>Severity</th><th>Rule</th><th>Algorithm</th><th>Language</th><th>Location</th><th>Remediation</th></tr>
+    </thead>
+    <tbody>
+      {{range .Scan.Findings}}
+      <tr class="{{sevClass (printf "%s" .Severity)}}">
+        <td><span class="pill pill-{{.Severity}}">{{.Severity}}</span></td>
+        <td><code>{{.Rule}}</code></td>
+        <td>{{.Algorithm}}</td>
+        <td>{{.Language}}</td>
+        <td><code>{{.File}}{{if .Line}}:{{.Line}}{{end}}</code>
+          {{if .Snippet}}<details><summary>snippet</summary><pre>{{.Snippet}}</pre></details>{{end}}
+        </td>
+        <td>{{.Remediation}}
+          {{if .Reference}}<br><small>ref: {{.Reference}}</small>{{end}}
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else if not .Scan.Error}}
+  <div class="empty success">
+    <p><strong>No findings.</strong> This target passes the current ruleset.</p>
+  </div>
+  {{end}}
+</section>
+{{end}}

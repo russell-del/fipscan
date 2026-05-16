@@ -1,0 +1,41 @@
+{{define "content"}}
+<section>
+  <div class="section-head">
+    <h2>Alert destinations</h2>
+    <a class="btn btn-primary" href="/alerts/new">Add destination</a>
+  </div>
+
+  {{if .Alerts}}
+  <table class="watchlist">
+    <thead>
+      <tr><th>Name</th><th>URL</th><th>Min severity</th><th>Added</th><th></th></tr>
+    </thead>
+    <tbody>
+      {{range .Alerts}}
+      <tr>
+        <td><strong>{{.Name}}</strong></td>
+        <td><code>{{.URL}}</code></td>
+        <td><span class="pill pill-{{.MinSeverity}}">{{.MinSeverity}}</span></td>
+        <td>{{.AddedAt.Format "2006-01-02 15:04 MST"}}</td>
+        <td class="actions">
+          <form action="/alerts/{{.ID}}/test" method="post" class="inline">
+            <button type="submit" class="btn btn-small">Send test</button>
+          </form>
+          <form action="/alerts/{{.ID}}/delete" method="post" class="inline"
+                onsubmit="return confirm('Remove this destination?');">
+            <button type="submit" class="btn btn-small btn-danger">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else}}
+  <div class="empty">
+    <p>No alert destinations yet.</p>
+    <p><small>fipscan POSTs JSON to each destination after a scan completes with new findings at or above the destination's configured severity. Compatible with Slack and Microsoft Teams incoming webhooks out of the box (they accept the <code>text</code> field), plus arbitrary HTTP receivers.</small></p>
+    <p><a class="btn btn-primary" href="/alerts/new">Add your first destination</a></p>
+  </div>
+  {{end}}
+</section>
+{{end}}

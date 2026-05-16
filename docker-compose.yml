@@ -1,0 +1,32 @@
+# Minimal docker-compose for fipscan server self-hosting.
+#
+# Usage:
+#   docker compose up -d
+#   open http://localhost:8080
+#
+# To pass GitHub credentials for private repos / private registries:
+#   set them via environment or a .env file (see commented vars below).
+
+services:
+  fipscan:
+    image: rbuilta/fipscan:0.7.1
+    # Or build locally if you don't pull from a registry:
+    # build: .
+    container_name: fipscan
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - fipscan-data:/var/lib/fipscan
+    environment:
+      # Optional — set for private GitHub repo scanning:
+      # GITHUB_TOKEN: "${GITHUB_TOKEN}"
+      # Optional — set for private OCI registries:
+      # FIPSCAN_REGISTRY_USERNAME: "${REG_USERNAME}"
+      # FIPSCAN_REGISTRY_PASSWORD: "${REG_PASSWORD}"
+      # Optional — required once Phase-2 auth lands:
+      # FIPSCAN_AUTH_PASSWORD_HASH: "${FIPSCAN_AUTH_PASSWORD_HASH}"
+      TZ: UTC
+
+volumes:
+  fipscan-data:

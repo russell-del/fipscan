@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>fipscan — {{.Title}}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1><a href="/">fipscan</a></h1>
+      <nav>
+        <a href="/">Dashboard</a>
+        <a href="/targets/new">Add target</a>
+        <a href="/alerts">Alerts</a>
+      </nav>
+    </div>
+  </header>
+  <main class="container">
+    {{template "content" .}}
+  </main>
+  <footer>
+    <div class="container">
+      <small>fipscan {{if .Version}}{{.Version}}{{end}} — FIPS 140-3 readiness scanner</small>
+    </div>
+  </footer>
+</body>
+</html>
