@@ -27,7 +27,7 @@ import (
 	"github.com/rbuilta/fipscan/internal/source"
 )
 
-const version = "1.0.0"
+const version = "1.0.1"
 
 // knownSubcommands is the dispatch table for `fipscan <subcommand> ...`.
 // Back-compat: if the first argument starts with "-" or is absent, the
@@ -80,6 +80,8 @@ func runScan(args []string) {
 		}
 		return
 	}
+
+	requireFIPSMode()
 
 	if *image != "" && (*repo != "" || *path != ".") {
 		fmt.Fprintln(os.Stderr, "-image cannot be combined with -repo or -path")
@@ -160,7 +162,36 @@ func runScan(args []string) {
 // Usage:
 //   echo -n 'my-secret' | fipscan hash-password
 //   FIPSCAN_AUTH_PASSWORD_HASH=$(echo -n 'my-secret' | fipscan hash-password)
+// requireFIPSMode is the runtime trust-anchor. fipscan refuses to run any
+// scanning, server, or hashing subcommand unless its embedded crypto is
+// the Go 1.26 FIPS 140-3 cryptographic module AND that module is
+// currently active. Operators can confirm the same posture externally
+// via `fipscan -version` (which is exempt from this guard so it remains
+// usable for diagnosis).
+//
+// Failure modes covered:
+//   - Binary built without GOFIPS140=v1.0.0 (Version() == "")
+//   - Built correctly but GODEBUG=fips140=off at runtime (Enabled() == false)
+//
+// Both are fail-closed: exit 2, clear remediation text, no silent fallback.
+func requireFIPSMode() {
+	ver := fips140.Version()
+	if ver == "" {
+		fmt.Fprintln(os.Stderr, "fipscan: refusing to start — binary was built without the FIPS 140-3 cryptographic module.")
+		fmt.Fprintln(os.Stderr, "  Build: CGO_ENABLED=0 GOFIPS140=v1.0.0 go build ./cmd/fipscan")
+		fmt.Fprintln(os.Stderr, "  Or pull the prebuilt image: docker pull ghcr.io/rbuilta/fipscan:latest")
+		os.Exit(2)
+	}
+	if !fips140.Enabled() {
+		fmt.Fprintln(os.Stderr, "fipscan: refusing to start — FIPS 140-3 mode is disabled at runtime.")
+		fmt.Fprintf(os.Stderr, "  Module %s is linked but GODEBUG=fips140=off was set.\n", ver)
+		fmt.Fprintln(os.Stderr, "  Unset GODEBUG=fips140 (or set it to `on` / `only`) and re-run.")
+		os.Exit(2)
+	}
+}
+
 func runHashPassword(args []string) {
+	requireFIPSMode()
 	pw, err := io.ReadAll(os.Stdin)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "read stdin: %v\n", err)
@@ -201,6 +232,8 @@ func runServer(args []string) {
 	if hash == "" {
 		hash = os.Getenv("FIPSCAN_AUTH_PASSWORD_HASH")
 	}
+
+	requireFIPSMode()
 
 	pubURL := *publicURL
 	if pubURL == "" {

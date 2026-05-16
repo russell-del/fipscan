@@ -4,6 +4,25 @@ All notable changes are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project
 uses [Semantic Versioning](https://semver.org/).
 
+## [1.0.1] — runtime FIPS-mode enforcement
+
+### Changed
+
+- Every subcommand (`scan`, `server`, `hash-password`) now refuses to
+  start unless the FIPS 140-3 cryptographic module is linked AND
+  `crypto/fips140.Enabled()` returns `true` at runtime. Fail-closed,
+  exit 2, with remediation text. `-version` remains exempt so it stays
+  usable for diagnosis.
+- `make build` now defaults to `GOFIPS140=v1.0.0`. There is no longer
+  a non-FIPS build path — every fipscan binary is a FIPS binary.
+
+### Added
+
+- `/api/v1/healthz` now reports `fips140_module` (module version) and
+  `fips140_mode_enabled` (runtime state).
+- Dashboard footer shows a FIPS-state badge on every page (green when
+  active, amber if module is linked but disabled, red if no module).
+
 ## [1.0.0] — initial public release
 
 ### Scanner

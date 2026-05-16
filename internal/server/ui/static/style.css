@@ -184,4 +184,19 @@ dl.meta dt { color: var(--fg-muted); font-size: 12px; text-transform: uppercase;
 dl.meta dd { margin: 0; }
 
 footer { padding: 32px 0 48px; color: var(--fg-muted); }
+footer .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
 footer small { font-size: 12px; }
+
+.fips-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+  font-variant-numeric: tabular-nums;
+}
+.fips-on   { background: var(--success-bg); color: var(--success); border-color: var(--success); }
+.fips-warn { background: var(--pill-medium-bg); color: var(--pill-medium-fg); border-color: var(--medium); }
+.fips-off  { background: var(--pill-high-bg);   color: var(--pill-high-fg);   border-color: var(--high); }

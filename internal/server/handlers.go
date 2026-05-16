@@ -1,6 +1,7 @@
 package server
 
 import (
+	"crypto/fips140"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -271,9 +272,11 @@ func writeJSON(w http.ResponseWriter, code int, v interface{}) {
 
 func (h *handlers) apiHealth(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]interface{}{
-		"status":    "ok",
-		"version":   h.version,
-		"timestamp": time.Now().UTC(),
+		"status":               "ok",
+		"version":              h.version,
+		"timestamp":            time.Now().UTC(),
+		"fips140_module":       fips140.Version(),
+		"fips140_mode_enabled": fips140.Enabled(),
 	})
 }
 

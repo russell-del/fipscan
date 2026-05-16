@@ -1,6 +1,7 @@
 package server
 
 import (
+	"crypto/fips140"
 	"embed"
 	"fmt"
 	"html/template"
@@ -49,12 +50,21 @@ func init() {
 }
 
 // render executes the named page template (composed with the layout)
-// against w.
+// against w. Augments the page's data map with FIPS module state so the
+// layout footer can display the badge on every page without each handler
+// having to remember to set it.
 func (h *handlers) render(w http.ResponseWriter, name string, data interface{}) {
 	t, ok := pageTemplates[name]
 	if !ok {
 		http.Error(w, fmt.Sprintf("unknown template %q", name), http.StatusInternalServerError)
 		return
+	}
+	if m, ok := data.(map[string]interface{}); ok {
+		if _, set := m["Version"]; !set {
+			m["Version"] = h.version
+		}
+		m["FIPSModule"] = fips140.Version()
+		m["FIPSEnabled"] = fips140.Enabled()
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := t.ExecuteTemplate(w, "_layout.html", data); err != nil {

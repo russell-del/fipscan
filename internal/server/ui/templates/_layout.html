@@ -23,6 +23,19 @@
   <footer>
     <div class="container">
       <small>fipscan {{if .Version}}{{.Version}}{{end}} — FIPS 140-3 readiness scanner</small>
+      {{if .FIPSEnabled}}
+        <span class="fips-badge fips-on" title="Go Cryptographic Module {{.FIPSModule}}, FIPS mode active at runtime">
+          ✓ FIPS 140-3 mode active ({{.FIPSModule}})
+        </span>
+      {{else if .FIPSModule}}
+        <span class="fips-badge fips-warn" title="Module is linked but FIPS mode is disabled at runtime">
+          ⚠ FIPS module linked but disabled
+        </span>
+      {{else}}
+        <span class="fips-badge fips-off" title="Binary was built without GOFIPS140=v1.0.0">
+          ✗ No FIPS module
+        </span>
+      {{end}}
     </div>
   </footer>
 </body>

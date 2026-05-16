@@ -38,24 +38,21 @@ info:
 	@echo "fipscan $(VERSION)  (Go $(GO_VERSION), $(GOOS)/$(GOARCH))"
 	@echo "SOURCE_DATE_EPOCH = $(SOURCE_DATE_EPOCH)"
 
-# Dev build (fast, full symbols).
+# Dev build. FIPS-built even in dev so the runtime guard in main.go
+# (requireFIPSMode) is satisfied — a non-FIPS dev build now refuses to
+# scan, which would be confusing during development.
 build:
 	@mkdir -p bin
-	$(GO) build -o bin/fipscan ./cmd/fipscan
+	CGO_ENABLED=0 GOFIPS140=v1.0.0 $(GO) build -o bin/fipscan ./cmd/fipscan
 
-# Stripped, reproducible build — no FIPS module.
-release:
-	@mkdir -p dist
-	CGO_ENABLED=0 $(GO) build $(REPRO_FLAGS) \
-		-o dist/fipscan-$(VERSION)-$(GOOS)-$(GOARCH) ./cmd/fipscan
-
-# Stripped, reproducible build WITH the Go 1.26 FIPS 140-3 module embedded.
-# The module identifies itself at runtime via crypto/fips140.Version().
-release-fips:
+# Stripped, reproducible, FIPS-built release binary for the host platform.
+# `release-fips` is kept as a synonym for backward compatibility — every
+# fipscan build is now a FIPS build.
+release release-fips:
 	@mkdir -p dist
 	CGO_ENABLED=0 GOFIPS140=v1.0.0 $(GO) build $(REPRO_FLAGS) \
-		-o dist/fipscan-$(VERSION)-fips-$(GOOS)-$(GOARCH) ./cmd/fipscan
-	@$(MAKE) fips-symbols-check BIN=dist/fipscan-$(VERSION)-fips-$(GOOS)-$(GOARCH)
+		-o dist/fipscan-$(VERSION)-$(GOOS)-$(GOARCH) ./cmd/fipscan
+	@$(MAKE) fips-symbols-check BIN=dist/fipscan-$(VERSION)-$(GOOS)-$(GOARCH)
 
 # Runs the freshly-built binary and queries the embedded FIPS 140-3 module
 # at runtime via crypto/fips140.Version(). Works on stripped binaries.
@@ -76,11 +73,12 @@ dogfood: build
 		-fail-on low
 
 # Build twice and compare SHA-256. Reproducibility is the prerequisite for
-# any meaningful supply-chain attestation.
+# any meaningful supply-chain attestation. Both builds are FIPS-built so
+# the test reflects what we actually ship.
 reproducibility-check:
 	@mkdir -p /tmp/reprocheck
-	CGO_ENABLED=0 $(GO) build $(REPRO_FLAGS) -o /tmp/reprocheck/a ./cmd/fipscan
-	CGO_ENABLED=0 $(GO) build $(REPRO_FLAGS) -o /tmp/reprocheck/b ./cmd/fipscan
+	CGO_ENABLED=0 GOFIPS140=v1.0.0 $(GO) build $(REPRO_FLAGS) -o /tmp/reprocheck/a ./cmd/fipscan
+	CGO_ENABLED=0 GOFIPS140=v1.0.0 $(GO) build $(REPRO_FLAGS) -o /tmp/reprocheck/b ./cmd/fipscan
 	@A=$$(shasum -a 256 /tmp/reprocheck/a | awk '{print $$1}'); \
 	 B=$$(shasum -a 256 /tmp/reprocheck/b | awk '{print $$1}'); \
 	 if [ "$$A" = "$$B" ]; then \
