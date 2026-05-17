@@ -4,6 +4,43 @@ All notable changes are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project
 uses [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] — GitLab + Bitbucket Cloud support
+
+### Added
+
+- **`source.Fetcher` interface** + factory `source.Choose(platform,
+  config)`. Three implementations: `GitHubFetcher`, `GitLabFetcher`,
+  `BitbucketFetcher`. All share the same hardened tarball-extract path
+  (path-traversal rejection, size caps, link-skip).
+- **GitLab** support (`-repo-platform=gitlab`). Cloud (gitlab.com) and
+  self-hosted (set `FIPSCAN_GITLAB_HOST`). Auth via PAT in the
+  `PRIVATE-TOKEN` header. Handles nested groups
+  ("group/subgroup/project") by URL-encoding the spec.
+- **Bitbucket Cloud** support (`-repo-platform=bitbucket`). Auth via
+  HTTP Basic with username + app-password. (Bitbucket Data Center is a
+  follow-up.)
+- New CLI flags: `-repo-platform`, `-gitlab-token`,
+  `-bitbucket-username`, `-bitbucket-password`. Env-var equivalents
+  (`GITLAB_TOKEN`, `BITBUCKET_USERNAME`, `BITBUCKET_APP_PASSWORD`).
+- Server watchlist: `Target.RepoHost` field. Add-target form has a
+  platform dropdown. Dashboard surfaces the platform as a small badge
+  next to the repo type pill. Scheduler dispatches to the correct
+  fetcher per target.
+
+### Changed
+
+- `Fetcher.FetchRepo` is now `(spec, ref) → (dir, err)` — `spec` is the
+  platform-conventional `owner/repo` or `group/project` string. Each
+  fetcher parses what's appropriate for its API.
+- `internal/source/github.go` shrank from 149 → ~50 LOC; common tarball
+  extraction lives in `internal/source/source.go`.
+
+### Tested against real public repos
+
+- GitHub: `paramiko/paramiko` → 12 findings (regression baseline)
+- GitLab: `gitlab-org/cli` → 2 SHA-1 findings
+- Bitbucket Cloud: `atlassian/atlassian-event` → 0 findings
+
 ## [1.0.2] — SIEM-friendly audit log
 
 ### Added

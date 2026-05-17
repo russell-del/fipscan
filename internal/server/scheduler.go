@@ -151,13 +151,16 @@ func (sc *Scheduler) scanOne(ctx context.Context, id string) {
 func executeScan(t Target) ([]findings.Finding, error) {
 	switch t.Type {
 	case TargetRepo:
-		owner, name, err := source.ParseRepoSpec(t.Value)
+		fetcher, err := source.Choose(t.RepoHost, source.Config{
+			GitHubToken:       os.Getenv("GITHUB_TOKEN"),
+			GitLabToken:       os.Getenv("GITLAB_TOKEN"),
+			BitbucketUsername: os.Getenv("BITBUCKET_USERNAME"),
+			BitbucketPassword: os.Getenv("BITBUCKET_APP_PASSWORD"),
+		})
 		if err != nil {
 			return nil, err
 		}
-		token := os.Getenv("GITHUB_TOKEN")
-		fetcher := source.NewGitHubFetcher(token)
-		dir, err := fetcher.FetchRepo(owner, name, t.Ref)
+		dir, err := fetcher.FetchRepo(t.Value, t.Ref)
 		if err != nil {
 			return nil, err
 		}

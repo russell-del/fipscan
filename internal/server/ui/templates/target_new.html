@@ -19,11 +19,20 @@
       <input type="text" name="value" required
              placeholder="owner/name  OR  registry/image:tag"
              autofocus>
-      <small>For repos: <code>octocat/Hello-World</code>. For images: <code>alpine:3.19</code>, <code>gcr.io/distroless/python3-debian12</code>, <code>registry.access.redhat.com/ubi9/ubi-minimal:latest</code>.</small>
+      <small>For repos: <code>octocat/Hello-World</code> (GitHub), <code>gitlab-org/cli</code> (GitLab), <code>workspace/repo</code> (Bitbucket). For images: <code>alpine:3.19</code>, <code>gcr.io/distroless/python3-debian12</code>, <code>registry.access.redhat.com/ubi9/ubi-minimal:latest</code>.</small>
     </label>
 
     <details class="advanced">
       <summary>Advanced</summary>
+      <label>
+        <span>Repository host (repos only)</span>
+        <select name="repo_host">
+          <option value="github" selected>GitHub (github.com or GHE via FIPSCAN_GITHUB_API)</option>
+          <option value="gitlab">GitLab (gitlab.com or self-hosted via FIPSCAN_GITLAB_HOST)</option>
+          <option value="bitbucket">Bitbucket Cloud</option>
+        </select>
+        <small>Credentials for non-public repos come from server env vars: <code>GITHUB_TOKEN</code>, <code>GITLAB_TOKEN</code>, or <code>BITBUCKET_USERNAME</code> + <code>BITBUCKET_APP_PASSWORD</code>.</small>
+      </label>
       <label>
         <span>Git ref (repos only)</span>
         <input type="text" name="ref" placeholder="main  /  v1.2.3  /  abc1234">

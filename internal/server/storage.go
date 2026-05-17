@@ -32,14 +32,15 @@ const (
 
 // Target is one entry in the scan watchlist.
 type Target struct {
-	ID        string     `json:"id"`
-	Type      TargetType `json:"type"`
-	Value     string     `json:"value"`          // owner/name for repos; image ref for images
-	Ref       string     `json:"ref,omitempty"`  // git ref (repo only)
-	Platform  string     `json:"platform,omitempty"` // linux/amd64 etc. (image only)
-	AddedAt   time.Time  `json:"added_at"`
-	LastScan  *time.Time `json:"last_scan,omitempty"`
-	LastScanID string    `json:"last_scan_id,omitempty"`
+	ID         string     `json:"id"`
+	Type       TargetType `json:"type"`
+	Value      string     `json:"value"`               // owner/name for repos; image ref for images
+	Ref        string     `json:"ref,omitempty"`       // git ref (repo only)
+	Platform   string     `json:"platform,omitempty"`  // linux/amd64 etc. (image only)
+	RepoHost   string     `json:"repo_host,omitempty"` // "github" | "gitlab" | "bitbucket" (repo only; default github)
+	AddedAt    time.Time  `json:"added_at"`
+	LastScan   *time.Time `json:"last_scan,omitempty"`
+	LastScanID string     `json:"last_scan_id,omitempty"`
 }
 
 // ScanRecord is the persisted result of one scheduler run against one

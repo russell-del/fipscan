@@ -100,6 +100,7 @@ func (h *handlers) targetNew(w http.ResponseWriter, r *http.Request) {
 			Value:    strings.TrimSpace(r.FormValue("value")),
 			Ref:      strings.TrimSpace(r.FormValue("ref")),
 			Platform: strings.TrimSpace(r.FormValue("platform")),
+			RepoHost: strings.TrimSpace(r.FormValue("repo_host")),
 		}
 		if t.Value == "" || (t.Type != TargetRepo && t.Type != TargetImage) {
 			http.Error(w, "type and value are required", http.StatusBadRequest)

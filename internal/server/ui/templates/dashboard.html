@@ -22,7 +22,10 @@
     <tbody>
       {{range .Rows}}
       <tr>
-        <td><span class="pill pill-{{.Target.Type}}">{{.Target.Type}}</span></td>
+        <td>
+          <span class="pill pill-{{.Target.Type}}">{{.Target.Type}}</span>
+          {{if and (eq (printf "%s" .Target.Type) "repo") .Target.RepoHost}}<small class="repo-host">{{.Target.RepoHost}}</small>{{end}}
+        </td>
         <td><a href="/targets/{{.Target.ID}}">{{.Target.Value}}</a>
           {{if .Target.Ref}}<small>@{{.Target.Ref}}</small>{{end}}
           {{if .Target.Platform}}<small>({{.Target.Platform}})</small>{{end}}

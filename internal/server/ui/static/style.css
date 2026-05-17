@@ -144,6 +144,7 @@ table small { display: block; }
 }
 .pill-repo   { background: var(--pill-repo-bg);   color: var(--pill-repo-fg); }
 .pill-image  { background: var(--pill-image-bg);  color: var(--pill-image-fg); }
+.repo-host   { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 4px; background: var(--code-bg); font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--fg-muted); }
 .pill-HIGH   { background: var(--pill-high-bg);   color: var(--pill-high-fg); }
 .pill-MEDIUM { background: var(--pill-medium-bg); color: var(--pill-medium-fg); }
 .pill-LOW    { background: var(--pill-low-bg);    color: var(--pill-low-fg); }

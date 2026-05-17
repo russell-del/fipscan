@@ -27,7 +27,7 @@ import (
 	"github.com/rbuilta/fipscan/internal/source"
 )
 
-const version = "1.0.2"
+const version = "1.1.0"
 
 // knownSubcommands is the dispatch table for `fipscan <subcommand> ...`.
 // Back-compat: if the first argument starts with "-" or is absent, the
@@ -52,9 +52,13 @@ func runScan(args []string) {
 	fs := flag.NewFlagSet("scan", flag.ExitOnError)
 	var (
 		path     = fs.String("path", ".", "Local path to scan (directory)")
-		repo     = fs.String("repo", "", "GitHub repo to scan, e.g. owner/name (overrides -path)")
+		repo     = fs.String("repo", "", "Repository to scan, e.g. owner/name (overrides -path). Used with -repo-platform.")
+		repoPlat = fs.String("repo-platform", "github", "Platform for -repo: github | gitlab | bitbucket")
 		ref      = fs.String("ref", "", "Git ref (branch, tag, or commit SHA) when using -repo (default: repo's default branch)")
-		token    = fs.String("token", "", "GitHub token for -repo (or set GITHUB_TOKEN env var). Required for private repos.")
+		token    = fs.String("token", "", "GitHub token for -repo (or set GITHUB_TOKEN env var). Required for private GitHub repos.")
+		glToken  = fs.String("gitlab-token", "", "GitLab PAT for -repo when -repo-platform=gitlab (or GITLAB_TOKEN env). Required for private GitLab projects.")
+		bbUser   = fs.String("bitbucket-username", "", "Bitbucket username for -repo when -repo-platform=bitbucket (or BITBUCKET_USERNAME env).")
+		bbPass   = fs.String("bitbucket-password", "", "Bitbucket app password (or BITBUCKET_APP_PASSWORD env).")
 		image    = fs.String("image", "", "Container image reference to scan, e.g. alpine:3.19 or gcr.io/distroless/python3:nonroot")
 		platform = fs.String("platform", "linux/amd64", "Platform for multi-arch images: os/arch[/variant] (e.g. linux/amd64, linux/arm64, linux/arm/v7)")
 		regUser  = fs.String("registry-username", "", "Registry username for -image (or set FIPSCAN_REGISTRY_USERNAME)")
@@ -104,7 +108,17 @@ func runScan(args []string) {
 		}
 		results = r
 	} else {
-		scanRoot, cleanup, err := resolveScanRoot(*path, *repo, *ref, *token)
+		fetcher, err := source.Choose(*repoPlat, source.Config{
+			GitHubToken:       firstNonEmpty(*token, os.Getenv("GITHUB_TOKEN")),
+			GitLabToken:       firstNonEmpty(*glToken, os.Getenv("GITLAB_TOKEN")),
+			BitbucketUsername: firstNonEmpty(*bbUser, os.Getenv("BITBUCKET_USERNAME")),
+			BitbucketPassword: firstNonEmpty(*bbPass, os.Getenv("BITBUCKET_APP_PASSWORD")),
+		})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(2)
+		}
+		scanRoot, cleanup, err := resolveScanRoot(*path, *repo, *ref, fetcher)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(2)
@@ -260,6 +274,17 @@ func runServer(args []string) {
 	}
 }
 
+// firstNonEmpty returns the first non-empty string. Used to give CLI
+// flags precedence over env-var defaults.
+func firstNonEmpty(s ...string) string {
+	for _, v := range s {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
 func parseExclude(s string) []string {
 	if s == "" {
 		return nil
@@ -288,25 +313,16 @@ func resolveRegistryAuth(userFlag, passFlag string) *registry.BasicAuth {
 	return &registry.BasicAuth{Username: user, Password: pass}
 }
 
-func resolveScanRoot(path, repo, ref, tokenFlag string) (string, func(), error) {
+func resolveScanRoot(path, repo, ref string, fetcher source.Fetcher) (string, func(), error) {
 	if repo == "" {
 		return path, func() {}, nil
 	}
-	owner, name, err := source.ParseRepoSpec(repo)
-	if err != nil {
-		return "", nil, err
-	}
-	token := tokenFlag
-	if token == "" {
-		token = os.Getenv("GITHUB_TOKEN")
-	}
-	fmt.Fprintf(os.Stderr, "fipscan: fetching %s/%s", owner, name)
+	fmt.Fprintf(os.Stderr, "fipscan: fetching %s (%s)", repo, fetcher.Platform())
 	if ref != "" {
 		fmt.Fprintf(os.Stderr, "@%s", ref)
 	}
 	fmt.Fprintln(os.Stderr, " ...")
-	fetcher := source.NewGitHubFetcher(token)
-	dir, err := fetcher.FetchRepo(owner, name, ref)
+	dir, err := fetcher.FetchRepo(repo, ref)
 	if err != nil {
 		return "", nil, err
 	}
