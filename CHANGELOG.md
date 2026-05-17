@@ -4,6 +4,46 @@ All notable changes are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project
 uses [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] — Ruby (Gemfile.lock) + PHP (composer.lock) ecosystems
+
+### Added
+
+- **`Gemfile.lock`** parser (Bundler lockfile, Ruby). Captures gems at
+  exactly 4-space indent inside any `specs:` block; transitive deps
+  (6+ spaces) are skipped via the regex anchor.
+- **`composer.lock`** parser (Composer lockfile, PHP). JSON; reads
+  both the `packages` and `packages-dev` arrays.
+- **RubyGems ecosystem** in the FIPS catalog. 6 entries: `bcrypt`,
+  `bcrypt-ruby`, `scrypt`, `argon2`, `rbnacl`, `eth`.
+- **Composer ecosystem** in the FIPS catalog. 4 entries:
+  `phpseclib/phpseclib`, `paragonie/halite`, `mdanter/ecc`,
+  `web3p/ethereum-tx`.
+
+### Tested
+
+- Local fixtures: 146 → **155** findings (+9 across the two new
+  manifest fixtures).
+- `mastodon/mastodon` (real Rails Gemfile.lock): surfaces
+  `bcrypt 3.1.22`.
+- `phpmyadmin/phpmyadmin` (real composer.lock): 36 code findings
+  (PHP source patterns firing), 0 composer-package findings — their
+  composer.lock simply doesn't ship any of the cataloged packages
+  (most PHP projects use the built-in `openssl_*` functions, which
+  the code scanner already detects).
+
+### Coverage so far — 13 dependency manifest formats across 7 ecosystems
+
+| Ecosystem | Formats |
+|---|---|
+| Python (PyPI) | `requirements.txt`, `Pipfile.lock`, `pyproject.toml`, `poetry.lock`, `uv.lock` |
+| Node (npm) | `package-lock.json`, `yarn.lock` |
+| Go | `go.mod` |
+| Java/Maven | `pom.xml` |
+| .NET/NuGet | `*.csproj` |
+| Rust/Cargo | `Cargo.lock` |
+| Ruby/RubyGems | `Gemfile.lock` |
+| PHP/Composer | `composer.lock` |
+
 ## [1.2.0] — More lockfile formats + Rust ecosystem
 
 ### Added

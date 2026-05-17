@@ -1,0 +1,29 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    actioncable (7.1.2)
+      actionpack (= 7.1.2)
+    bcrypt (3.1.20)
+    scrypt (3.0.8)
+    argon2 (2.3.0)
+    rbnacl (7.1.1)
+    eth (0.5.11)
+    rails (7.1.2)
+      actioncable (= 7.1.2)
+      activerecord (= 7.1.2)
+    rake (13.0.6)
+    sqlite3 (1.7.0)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  bcrypt
+  scrypt
+  argon2
+  rails (~> 7.1)
+  rake
+  sqlite3
+
+BUNDLED WITH
+   2.5.5

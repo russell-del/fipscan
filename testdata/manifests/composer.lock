@@ -1,0 +1,41 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies"
+    ],
+    "content-hash": "abc123",
+    "packages": [
+        {
+            "name": "symfony/console",
+            "version": "v7.0.2"
+        },
+        {
+            "name": "phpseclib/phpseclib",
+            "version": "3.0.34"
+        },
+        {
+            "name": "paragonie/halite",
+            "version": "5.1.0"
+        },
+        {
+            "name": "mdanter/ecc",
+            "version": "1.0.0"
+        },
+        {
+            "name": "web3p/ethereum-tx",
+            "version": "0.4.4"
+        },
+        {
+            "name": "guzzlehttp/guzzle",
+            "version": "7.8.1"
+        }
+    ],
+    "packages-dev": [
+        {
+            "name": "phpunit/phpunit",
+            "version": "10.5.5"
+        }
+    ],
+    "platform": [],
+    "platform-dev": []
+}

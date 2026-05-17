@@ -222,6 +222,80 @@ var catalog = []CatalogEntry{
 		Reference:   "FIPS 197",
 	},
 
+	// ---- RubyGems (Ruby) ----------------------------------------------------
+	{
+		Ecosystem: "rubygems", Name: "bcrypt",
+		RuleID: "FIPS-DEP-GEM-001", Severity: "HIGH",
+		Reason:      "bcrypt is built on Blowfish, which is not FIPS 140-3 approved.",
+		Remediation: "Use PBKDF2 via OpenSSL::PKCS5.pbkdf2_hmac with SHA-256 or SHA-512.",
+		Reference:   "NIST SP 800-132",
+	},
+	{
+		Ecosystem: "rubygems", Name: "bcrypt-ruby",
+		RuleID: "FIPS-DEP-GEM-001", Severity: "HIGH",
+		Reason:      "Legacy name of the bcrypt gem; bcrypt is built on Blowfish, which is not FIPS 140-3 approved.",
+		Remediation: "Use PBKDF2 via OpenSSL::PKCS5.pbkdf2_hmac with SHA-256 or SHA-512.",
+		Reference:   "NIST SP 800-132",
+	},
+	{
+		Ecosystem: "rubygems", Name: "scrypt",
+		RuleID: "FIPS-DEP-GEM-002", Severity: "HIGH",
+		Reason:      "scrypt is not on the FIPS 140-3 approved KDF list.",
+		Remediation: "Use PBKDF2 with SHA-256 or SHA-512.",
+		Reference:   "NIST SP 800-132",
+	},
+	{
+		Ecosystem: "rubygems", Name: "argon2",
+		RuleID: "FIPS-DEP-GEM-003", Severity: "HIGH",
+		Reason:      "Argon2 is not currently on the FIPS 140-3 approved KDF list (NIST is studying it).",
+		Remediation: "For FIPS deployments, use PBKDF2 with SHA-256 or SHA-512.",
+		Reference:   "NIST SP 800-132",
+	},
+	{
+		Ecosystem: "rubygems", Name: "rbnacl",
+		RuleID: "FIPS-DEP-GEM-004", Severity: "MEDIUM",
+		Reason:      "rbnacl wraps libsodium, which is not FIPS 140-3 validated.",
+		Remediation: "Use Ruby stdlib `openssl` on a runtime backed by a FIPS-validated OpenSSL build.",
+		Reference:   "NIST CMVP",
+	},
+	{
+		Ecosystem: "rubygems", Name: "eth",
+		RuleID: "FIPS-DEP-GEM-005", Severity: "HIGH",
+		Reason:      "The `eth` gem (Ethereum) uses secp256k1, which is not on the FIPS 186-5 approved curve list.",
+		Remediation: "If FIPS-mandated, use OpenSSL::PKey::EC with 'prime256v1' / 'secp384r1' instead.",
+		Reference:   "FIPS 186-5",
+	},
+
+	// ---- Composer (PHP / Packagist) ------------------------------------------
+	{
+		Ecosystem: "composer", Name: "phpseclib/phpseclib",
+		RuleID: "FIPS-DEP-COMPOSER-001", Severity: "MEDIUM",
+		Reason:      "phpseclib is pure-PHP and is NOT a FIPS-validated cryptographic module. It also exposes DES, 3DES, RC4 and other non-approved primitives.",
+		Remediation: "Use openssl_encrypt / openssl_pkey_* on a runtime backed by a FIPS-validated OpenSSL build.",
+		Reference:   "NIST CMVP",
+	},
+	{
+		Ecosystem: "composer", Name: "paragonie/halite",
+		RuleID: "FIPS-DEP-COMPOSER-002", Severity: "MEDIUM",
+		Reason:      "Halite wraps libsodium, which is not FIPS 140-3 validated.",
+		Remediation: "Use openssl_encrypt / openssl_pkey_* on a runtime backed by a FIPS-validated OpenSSL build.",
+		Reference:   "NIST CMVP",
+	},
+	{
+		Ecosystem: "composer", Name: "mdanter/ecc",
+		RuleID: "FIPS-DEP-COMPOSER-003", Severity: "MEDIUM",
+		Reason:      "Pure-PHP elliptic curve library. Not FIPS validated; exposes non-NIST curves such as secp256k1.",
+		Remediation: "Use openssl_pkey_new with `curve_name` set to `prime256v1`, `secp384r1`, or `secp521r1`.",
+		Reference:   "FIPS 186-5",
+	},
+	{
+		Ecosystem: "composer", Name: "web3p/ethereum-tx",
+		RuleID: "FIPS-DEP-COMPOSER-004", Severity: "HIGH",
+		Reason:      "Ethereum transaction signing uses secp256k1, which is not on the FIPS 186-5 approved curve list.",
+		Remediation: "If FIPS-mandated, do not use this package — Ethereum signatures cannot be FIPS-compliant.",
+		Reference:   "FIPS 186-5",
+	},
+
 	// ---- Maven (Java) --------------------------------------------------------
 	{
 		Ecosystem: "maven", Name: "org.bouncycastle:bcprov-jdk15on",

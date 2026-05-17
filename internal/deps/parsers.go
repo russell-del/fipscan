@@ -380,6 +380,104 @@ func parseYarnLock(path string) ([]ParsedDep, error) {
 }
 
 // ============================================================================
+// Gemfile.lock — Bundler lockfile (Ruby)
+//
+// Format:
+//
+//   GEM
+//     remote: https://rubygems.org/
+//     specs:
+//       bcrypt (3.1.20)
+//       rails (7.1.2)
+//         actioncable (= 7.1.2)
+//
+//   PLATFORMS
+//     ruby
+//
+//   DEPENDENCIES
+//     bcrypt
+//     rails (~> 7.1)
+//
+// Installed gems live at exactly 4-space indent inside any `specs:`
+// block (GEM, GIT, PATH all use the same shape). Transitive deps
+// listed under a gem are at 6+ spaces — we skip them via the regex
+// anchor.
+// ============================================================================
+
+var gemfileLockRE = regexp.MustCompile(`^    ([a-z][a-z0-9_.-]*)\s+\(([^)]+)\)\s*$`)
+
+func parseGemfileLock(path string) ([]ParsedDep, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var out []ParsedDep
+	s := bufio.NewScanner(f)
+	s.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	lineNum := 0
+	for s.Scan() {
+		lineNum++
+		raw := s.Text()
+		m := gemfileLockRE.FindStringSubmatch(raw)
+		if m == nil {
+			continue
+		}
+		out = append(out, ParsedDep{
+			Name:    strings.ToLower(m[1]),
+			Version: m[2],
+			Line:    lineNum,
+			Snippet: strings.TrimSpace(raw),
+		})
+	}
+	return out, s.Err()
+}
+
+// ============================================================================
+// composer.lock — Composer lockfile (PHP)
+//
+// JSON. Top-level `packages` (runtime) and `packages-dev` arrays each
+// contain objects with `name` (vendor/package) and `version`.
+// ============================================================================
+
+type composerPkg struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
+type composerLock struct {
+	Packages    []composerPkg `json:"packages"`
+	PackagesDev []composerPkg `json:"packages-dev"`
+}
+
+func parseComposerLock(path string) ([]ParsedDep, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var cl composerLock
+	if err := json.Unmarshal(data, &cl); err != nil {
+		return nil, err
+	}
+	var out []ParsedDep
+	for _, group := range [][]composerPkg{cl.Packages, cl.PackagesDev} {
+		for _, p := range group {
+			if p.Name == "" {
+				continue
+			}
+			out = append(out, ParsedDep{
+				Name:    strings.ToLower(p.Name),
+				Version: strings.TrimPrefix(p.Version, "v"),
+				Line:    findLineFor(data, `"name": "`+p.Name+`"`),
+				Snippet: p.Name + " " + p.Version,
+			})
+		}
+	}
+	return out, nil
+}
+
+// ============================================================================
 // Pipfile.lock — pipenv lockfile (JSON)
 // ============================================================================
 

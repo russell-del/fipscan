@@ -28,6 +28,8 @@ var exactMatchers = map[string]ecosystemSpec{
 	"poetry.lock":       {"pypi", "PyPI", parsePoetryLock},
 	"uv.lock":           {"pypi", "PyPI", parseUvLock},
 	"Cargo.lock":        {"cargo", "Cargo", parseCargoLock},
+	"Gemfile.lock":      {"rubygems", "RubyGems", parseGemfileLock},
+	"composer.lock":     {"composer", "Composer", parseComposerLock},
 }
 
 // suffixMatchers covers extension-based matches (where the filename varies).
