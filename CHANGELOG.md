@@ -4,6 +4,36 @@ All notable changes are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project
 uses [Semantic Versioning](https://semver.org/).
 
+## [1.5.0] — Cross-manifest dedup
+
+### Added
+
+- **`internal/deps/dedup.go`** with `Dedup([]Finding) []Finding`. When
+  the same package fires the same rule from multiple manifests in one
+  project, only the finding from the highest-priority manifest is
+  kept. Lockfiles (uv.lock, poetry.lock, Pipfile.lock, yarn.lock,
+  package-lock.json) outrank declarative manifests (pyproject.toml,
+  requirements.txt) because they carry the resolved version.
+- `internal/deps/dedup_test.go` — 5 sub-tests covering: lockfile
+  precedence, range-split entries (different rules, both kept),
+  different packages with same rule (both kept), code findings (pass
+  through), order preservation.
+- **CLI `-no-dedup`** flag for users who want the raw output.
+- Server scheduler dedupes unconditionally — dashboard noise drops
+  for any Python or Node project that ships both a manifest and a
+  lockfile.
+
+### Tested
+
+| Test | Before | After |
+|---|---|---|
+| Local fixtures | 156 | **133** (23 duplicates collapsed) |
+| Same scan with `-no-dedup` | 156 | 156 (baseline preserved) |
+| `bcrypt` across requirements/Pipfile/pyproject/uv.lock fixtures | 4 findings | **1** (kept the uv.lock entry) |
+| `mitmproxy/mitmproxy` real-world | 6 (2 bcrypt + 2 cryptography + 2 code) | **4** (1 bcrypt + 1 cryptography + 2 code) |
+| `make dogfood` | clean | clean |
+| `go test ./internal/deps/` | 3 tests | **8 tests** (5 new) |
+
 ## [1.4.0] — Version-range matching in the catalog (+ first unit tests)
 
 ### Added

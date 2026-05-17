@@ -173,7 +173,7 @@ func executeScan(t Target) ([]findings.Finding, error) {
 		if err != nil {
 			return nil, err
 		}
-		return append(codeFindings, depFindings...), nil
+		return deps.Dedup(append(codeFindings, depFindings...)), nil
 	case TargetImage:
 		plat := registry.DefaultPlatform
 		if t.Platform != "" {

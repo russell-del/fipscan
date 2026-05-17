@@ -27,7 +27,7 @@ import (
 	"github.com/rbuilta/fipscan/internal/source"
 )
 
-const version = "1.4.0"
+const version = "1.5.0"
 
 // knownSubcommands is the dispatch table for `fipscan <subcommand> ...`.
 // Back-compat: if the first argument starts with "-" or is absent, the
@@ -64,6 +64,7 @@ func runScan(args []string) {
 		regUser  = fs.String("registry-username", "", "Registry username for -image (or set FIPSCAN_REGISTRY_USERNAME)")
 		regPass  = fs.String("registry-password", "", "Registry password for -image (or set FIPSCAN_REGISTRY_PASSWORD)")
 		exclude  = fs.String("exclude", "", "Comma-separated list of repo-relative paths to skip (e.g. testdata,vendor)")
+		noDedup  = fs.Bool("no-dedup", false, "Disable cross-manifest dedup. By default, a package flagged in both a lockfile and a declarative manifest produces one finding (from the lockfile).")
 		format   = fs.String("format", "terminal", "Output format: terminal | json | sarif")
 		failOn   = fs.String("fail-on", "high", "Exit non-zero if findings at or above this severity exist: high | medium | low | none")
 		showV    = fs.Bool("version", false, "Print version and exit")
@@ -143,6 +144,9 @@ func runScan(args []string) {
 		// findings are reported with paths relative to the repo root.
 		if *repo != "" {
 			results = relativizePaths(results, scanRoot)
+		}
+		if !*noDedup {
+			results = deps.Dedup(results)
 		}
 	}
 
