@@ -1,0 +1,2 @@
+# Intentionally pinned to CVE-affected versions to verify version-range matching
+cryptography==30.0.0

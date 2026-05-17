@@ -4,6 +4,52 @@ All notable changes are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project
 uses [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] — Version-range matching in the catalog (+ first unit tests)
+
+### Added
+
+- **`internal/deps/version.go`** — a pragmatic SemVer-ish version
+  parser and constraint set. Accepts the common operators (`<`, `<=`,
+  `>`, `>=`, `==`, `!=`) and intersections (`>=1.0,<2.0`). Truncates
+  to major.minor.patch — distro release suffixes (`-r1`, `-11.el9`),
+  SemVer pre-release (`-rc.1`), and build metadata (`+abi.7`) are
+  ignored so the catalog can match real-world version strings without
+  per-ecosystem parsers.
+- **`CatalogEntry.AffectedVersions` field** — optional constraint that
+  narrows an entry to a version range. Empty means "applies to all
+  versions" (backward compatible — existing entries unchanged).
+- **Multiple entries per (ecosystem, name) are now supported.** The
+  same package can carry different severities for different version
+  windows.
+- **`internal/deps/version_test.go`** — first real unit-test file in
+  the codebase. `ParseVersion`, `Compare`, and `Constraint` covered
+  with table-driven tests. Run via `go test ./...`.
+
+### Demonstrated with two real CVE boundaries
+
+- **`cryptography <39.0.1`** → HIGH (`FIPS-DEP-PYPI-006-CVE`,
+  CVE-2023-23931 memory corruption). **`>=39.0.1`** → MEDIUM
+  (bundled-OpenSSL FIPS posture only).
+- **`node-forge <1.3.0`** → HIGH (`FIPS-DEP-NPM-005-CVE`,
+  CVE-2022-24771 / 24772 / 24773 RSA PKCS#1 v1.5 signature bypass).
+  **`>=1.3.0`** → MEDIUM (non-FIPS posture only).
+
+### Changed
+
+- `Lookup` signature changed from `(ecosystem, name) → *CatalogEntry`
+  to `(ecosystem, name, version) → []CatalogEntry`. Scanner loops over
+  matches so a package can emit multiple findings if multiple entries
+  apply.
+
+### Tested
+
+- Local fixtures: 155 → **156** (`testdata/manifests/legacy/requirements.txt`
+  added with `cryptography==30.0.0` — fires the HIGH CVE entry).
+- Real-world: `mitmproxy/mitmproxy` `cryptography 46.0.4` now correctly
+  fires only the MEDIUM posture entry (not both).
+- Range mechanism verified: `node-forge 1.3.1` in two existing fixtures
+  → MEDIUM only (not both HIGH and MEDIUM).
+
 ## [1.3.0] — Ruby (Gemfile.lock) + PHP (composer.lock) ecosystems
 
 ### Added

@@ -41,7 +41,14 @@ var catalog = []CatalogEntry{
 		Reference:   "NIST CMVP",
 	},
 	{
-		Ecosystem: "pypi", Name: "cryptography",
+		Ecosystem: "pypi", Name: "cryptography", AffectedVersions: "<39.0.1",
+		RuleID: "FIPS-DEP-PYPI-006-CVE", Severity: "HIGH",
+		Reason:      "cryptography <39.0.1 is affected by CVE-2023-23931 (memory corruption when Cipher.update_into is called on an immutable Python object).",
+		Remediation: "Upgrade to cryptography 39.0.1 or later.",
+		Reference:   "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-23931",
+	},
+	{
+		Ecosystem: "pypi", Name: "cryptography", AffectedVersions: ">=39.0.1",
 		RuleID: "FIPS-DEP-PYPI-006", Severity: "MEDIUM",
 		Reason:      "PyPI wheels of `cryptography` ship a bundled non-FIPS OpenSSL. The package is fine; the build matters.",
 		Remediation: "For FIPS deployments, build `cryptography` from source against a FIPS-validated OpenSSL 3.x with the FIPS provider activated, or install via a distro package linked to FIPS-validated OpenSSL.",
@@ -92,7 +99,14 @@ var catalog = []CatalogEntry{
 		Reference:   "NIST SP 800-132",
 	},
 	{
-		Ecosystem: "npm", Name: "node-forge",
+		Ecosystem: "npm", Name: "node-forge", AffectedVersions: "<1.3.0",
+		RuleID: "FIPS-DEP-NPM-005-CVE", Severity: "HIGH",
+		Reason:      "node-forge <1.3.0 is affected by CVE-2022-24771 / 24772 / 24773 (RSA PKCS#1 v1.5 signature verification bypass).",
+		Remediation: "Upgrade to node-forge 1.3.0 or later.",
+		Reference:   "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-24771",
+	},
+	{
+		Ecosystem: "npm", Name: "node-forge", AffectedVersions: ">=1.3.0",
 		RuleID: "FIPS-DEP-NPM-005", Severity: "MEDIUM",
 		Reason:      "node-forge is pure-JavaScript and is not FIPS-validated. It includes implementations of non-approved algorithms.",
 		Remediation: "Use Node's built-in `crypto` module on a FIPS-validated OpenSSL runtime.",

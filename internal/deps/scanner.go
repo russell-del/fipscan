@@ -109,25 +109,27 @@ func ScanPath(root string, opts Options) ([]findings.Finding, error) {
 			return nil
 		}
 		for _, dep := range parsed {
-			entry := Lookup(spec.Ecosystem, dep.Name)
-			if entry == nil {
+			matches := Lookup(spec.Ecosystem, dep.Name, dep.Version)
+			if len(matches) == 0 {
 				continue
 			}
 			display := dep.Name
 			if dep.Version != "" {
 				display = dep.Name + " " + dep.Version
 			}
-			results = append(results, findings.Finding{
-				File:        path,
-				Line:        dep.Line,
-				Algorithm:   display,
-				Language:    spec.Display,
-				Severity:    findings.Severity(entry.Severity),
-				Snippet:     dep.Snippet,
-				Rule:        entry.RuleID,
-				Remediation: entry.Reason + " " + entry.Remediation,
-				Reference:   entry.Reference,
-			})
+			for _, entry := range matches {
+				results = append(results, findings.Finding{
+					File:        path,
+					Line:        dep.Line,
+					Algorithm:   display,
+					Language:    spec.Display,
+					Severity:    findings.Severity(entry.Severity),
+					Snippet:     dep.Snippet,
+					Rule:        entry.RuleID,
+					Remediation: entry.Reason + " " + entry.Remediation,
+					Reference:   entry.Reference,
+				})
+			}
 		}
 		return nil
 	})
