@@ -4,6 +4,35 @@ All notable changes are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project
 uses [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] — More lockfile formats + Rust ecosystem
+
+### Added
+
+- **`uv.lock`** parser (PEP 723 + astral-sh/uv lockfile format).
+- **`poetry.lock`** parser (Poetry classic lockfile).
+- **`Cargo.lock`** parser (Rust crates.io lockfile).
+- **`yarn.lock`** parser (Yarn classic / berry custom format).
+- **Cargo / Rust ecosystem** in the FIPS-relevance catalog. 8 entries:
+  `md5`, `md-5`, `sha1`, `sha-1`, `bcrypt`, `secp256k1`, `k256`,
+  `rc4`, `des`.
+
+The three TOML-based lockfiles (uv.lock, poetry.lock, Cargo.lock) all
+serialise their resolved dependency set as `[[package]]` arrays-of-
+tables — `parsePackageArrayTOML` handles all three with one
+implementation; the parser functions are thin wrappers that exist only
+so the scanner can register each filename with its own ecosystem
+("pypi" vs "cargo").
+
+### Tested
+
+- Local fixtures: 125 → **146** findings (+21 from the four new
+  manifest fixtures).
+- `mitmproxy/mitmproxy` (real uv.lock): now surfaces `bcrypt 5.0.0` and
+  `cryptography 46.0.4` from the lockfile, in addition to the
+  pyproject.toml manifest declarations.
+- `BurntSushi/ripgrep` (real Cargo.lock): 0 findings, fetch+parse
+  worked end-to-end.
+
 ## [1.1.0] — GitLab + Bitbucket Cloud support
 
 ### Added

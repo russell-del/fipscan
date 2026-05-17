@@ -194,6 +194,192 @@ func cleanPoetrySpec(s string) string {
 }
 
 // ============================================================================
+// [[package]]-array TOML lockfiles — uv.lock, poetry.lock, Cargo.lock
+//
+// All three formats serialise the resolved dependency set as a sequence
+// of TOML arrays-of-tables:
+//
+//   [[package]]
+//   name = "django"
+//   version = "4.2.7"
+//
+//   [[package]]
+//   name = "requests"
+//   version = "2.31.0"
+//
+// poetry.lock additionally nests sub-sections like [package.dependencies]
+// inside each [[package]] block; we ignore those (we only need name +
+// version per package, not the dep graph). Sticking to section-aware
+// line scanning keeps the binary dep-free.
+// ============================================================================
+
+var tomlKVRE = regexp.MustCompile(`^([A-Za-z0-9_-]+)\s*=\s*"([^"]+)"`)
+
+func parsePackageArrayTOML(path string) ([]ParsedDep, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var out []ParsedDep
+	var cur ParsedDep
+	curStartLine := 0
+	inPackage := false
+	inPackageSubsection := false
+
+	flush := func() {
+		if cur.Name != "" {
+			cur.Line = curStartLine
+			if cur.Snippet == "" {
+				cur.Snippet = cur.Name + " " + cur.Version
+			}
+			out = append(out, cur)
+		}
+		cur = ParsedDep{}
+		curStartLine = 0
+	}
+
+	s := bufio.NewScanner(f)
+	s.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	lineNum := 0
+	for s.Scan() {
+		lineNum++
+		raw := s.Text()
+		trimmed := strings.TrimSpace(raw)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+
+		// [[package]] — array-of-tables, opens a new package block.
+		if strings.HasPrefix(trimmed, "[[") && strings.HasSuffix(trimmed, "]]") {
+			section := strings.TrimSpace(strings.Trim(trimmed, "[]"))
+			flush()
+			if section == "package" {
+				inPackage = true
+				inPackageSubsection = false
+				curStartLine = lineNum
+			} else {
+				inPackage = false
+				inPackageSubsection = false
+			}
+			continue
+		}
+		// [section] — single table. poetry.lock has [package.dependencies]
+		// and [package.extras] nested under the current [[package]] which
+		// we want to skip without flushing.
+		if strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {
+			section := strings.TrimSpace(strings.Trim(trimmed, "[]"))
+			if inPackage && strings.HasPrefix(section, "package.") {
+				inPackageSubsection = true
+				continue
+			}
+			flush()
+			inPackage = false
+			inPackageSubsection = false
+			continue
+		}
+
+		if !inPackage || inPackageSubsection {
+			continue
+		}
+		m := tomlKVRE.FindStringSubmatch(trimmed)
+		if m == nil {
+			continue
+		}
+		switch m[1] {
+		case "name":
+			cur.Name = strings.ToLower(m[2])
+			cur.Snippet = trimmed
+		case "version":
+			cur.Version = m[2]
+		}
+	}
+	flush()
+	return out, s.Err()
+}
+
+// Thin wrappers exist so scanner.go can register each filename with its
+// own ecosystem string ("pypi" vs "cargo"). The parsing is identical.
+func parseUvLock(path string) ([]ParsedDep, error)     { return parsePackageArrayTOML(path) }
+func parsePoetryLock(path string) ([]ParsedDep, error) { return parsePackageArrayTOML(path) }
+func parseCargoLock(path string) ([]ParsedDep, error)  { return parsePackageArrayTOML(path) }
+
+// ============================================================================
+// yarn.lock — Yarn classic / berry lockfile (custom format, YAML-ish)
+//
+// Top-level entries look like:
+//   "@babel/code-frame@^7.0.0", "@babel/code-frame@^7.22.0":
+//     version "7.16.7"
+//     resolved "..."
+//
+//   acorn@^8.4.1:
+//     version "8.7.0"
+//
+// We capture the package name from the FIRST spec on the descriptor
+// line and the resolved version from the indented `version` line.
+// ============================================================================
+
+var (
+	yarnTopRE     = regexp.MustCompile(`^"?(@?[A-Za-z0-9._/-]+)@`)
+	yarnVersionRE = regexp.MustCompile(`^\s+version\s+"([^"]+)"`)
+)
+
+func parseYarnLock(path string) ([]ParsedDep, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var out []ParsedDep
+	var cur ParsedDep
+	inEntry := false
+
+	flush := func() {
+		if cur.Name != "" {
+			if cur.Snippet == "" {
+				cur.Snippet = cur.Name + " " + cur.Version
+			}
+			out = append(out, cur)
+		}
+		cur = ParsedDep{}
+		inEntry = false
+	}
+
+	s := bufio.NewScanner(f)
+	s.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	lineNum := 0
+	for s.Scan() {
+		lineNum++
+		raw := s.Text()
+		if strings.TrimSpace(raw) == "" || strings.HasPrefix(raw, "#") {
+			continue
+		}
+		// Indented line — only `version "..."` is interesting.
+		if raw[0] == ' ' || raw[0] == '\t' {
+			if !inEntry {
+				continue
+			}
+			if m := yarnVersionRE.FindStringSubmatch(raw); m != nil {
+				cur.Version = m[1]
+			}
+			continue
+		}
+		// Top-level descriptor line.
+		flush()
+		if m := yarnTopRE.FindStringSubmatch(raw); m != nil {
+			cur.Name = strings.ToLower(m[1])
+			cur.Line = lineNum
+			cur.Snippet = strings.TrimSpace(raw)
+			inEntry = true
+		}
+	}
+	flush()
+	return out, s.Err()
+}
+
+// ============================================================================
 // Pipfile.lock — pipenv lockfile (JSON)
 // ============================================================================
 

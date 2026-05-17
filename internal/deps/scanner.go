@@ -21,9 +21,13 @@ type ecosystemSpec struct {
 var exactMatchers = map[string]ecosystemSpec{
 	"go.mod":            {"go", "Go modules", parseGoMod},
 	"package-lock.json": {"npm", "npm", parsePackageLock},
+	"yarn.lock":         {"npm", "npm", parseYarnLock},
 	"Pipfile.lock":      {"pypi", "PyPI", parsePipfileLock},
 	"pom.xml":           {"maven", "Maven", parsePomXml},
 	"pyproject.toml":    {"pypi", "PyPI", parsePyprojectToml},
+	"poetry.lock":       {"pypi", "PyPI", parsePoetryLock},
+	"uv.lock":           {"pypi", "PyPI", parseUvLock},
+	"Cargo.lock":        {"cargo", "Cargo", parseCargoLock},
 }
 
 // suffixMatchers covers extension-based matches (where the filename varies).

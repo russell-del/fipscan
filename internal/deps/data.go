@@ -157,6 +157,71 @@ var catalog = []CatalogEntry{
 		Reference:   "FIPS 186-5",
 	},
 
+	// ---- Cargo (Rust crates.io) ---------------------------------------------
+	{
+		Ecosystem: "cargo", Name: "md5",
+		RuleID: "FIPS-DEP-CARGO-001", Severity: "HIGH",
+		Reason:      "The `md5` crate wraps MD5, which is not FIPS 140-3 approved.",
+		Remediation: "Replace with `sha2` (`sha2::Sha256`).",
+		Reference:   "FIPS 180-4",
+	},
+	{
+		Ecosystem: "cargo", Name: "md-5",
+		RuleID: "FIPS-DEP-CARGO-001", Severity: "HIGH",
+		Reason:      "The `md-5` crate (the RustCrypto MD5 implementation) is not FIPS 140-3 approved.",
+		Remediation: "Replace with `sha2::Sha256`.",
+		Reference:   "FIPS 180-4",
+	},
+	{
+		Ecosystem: "cargo", Name: "sha1",
+		RuleID: "FIPS-DEP-CARGO-002", Severity: "MEDIUM",
+		Reason:      "The `sha1` crate (the RustCrypto SHA-1 implementation) is disallowed for digital signatures.",
+		Remediation: "Replace with `sha2::Sha256`.",
+		Reference:   "NIST SP 800-131A Rev. 2",
+	},
+	{
+		Ecosystem: "cargo", Name: "sha-1",
+		RuleID: "FIPS-DEP-CARGO-002", Severity: "MEDIUM",
+		Reason:      "The `sha-1` crate is disallowed for digital signatures.",
+		Remediation: "Replace with `sha2::Sha256`.",
+		Reference:   "NIST SP 800-131A Rev. 2",
+	},
+	{
+		Ecosystem: "cargo", Name: "bcrypt",
+		RuleID: "FIPS-DEP-CARGO-003", Severity: "HIGH",
+		Reason:      "bcrypt is built on Blowfish, which is not FIPS 140-3 approved.",
+		Remediation: "Use `pbkdf2` with SHA-256/SHA-512 for password hashing.",
+		Reference:   "NIST SP 800-132",
+	},
+	{
+		Ecosystem: "cargo", Name: "secp256k1",
+		RuleID: "FIPS-DEP-CARGO-004", Severity: "HIGH",
+		Reason:      "secp256k1 is not on the FIPS 186-5 approved curve list.",
+		Remediation: "Use `p256` or `p384` (NIST P-256 / P-384) instead.",
+		Reference:   "FIPS 186-5",
+	},
+	{
+		Ecosystem: "cargo", Name: "k256",
+		RuleID: "FIPS-DEP-CARGO-004", Severity: "HIGH",
+		Reason:      "k256 implements secp256k1, which is not FIPS 186-5 approved.",
+		Remediation: "Use `p256` or `p384` instead.",
+		Reference:   "FIPS 186-5",
+	},
+	{
+		Ecosystem: "cargo", Name: "rc4",
+		RuleID: "FIPS-DEP-CARGO-005", Severity: "HIGH",
+		Reason:      "RC4 is not FIPS 140-3 approved.",
+		Remediation: "Use `aes-gcm` for AEAD or `aes` for raw AES.",
+		Reference:   "NIST SP 800-131A Rev. 2",
+	},
+	{
+		Ecosystem: "cargo", Name: "des",
+		RuleID: "FIPS-DEP-CARGO-006", Severity: "HIGH",
+		Reason:      "The `des` crate provides DES / 3DES, which are not FIPS 140-3 approved (after 2023).",
+		Remediation: "Use `aes` / `aes-gcm`.",
+		Reference:   "FIPS 197",
+	},
+
 	// ---- Maven (Java) --------------------------------------------------------
 	{
 		Ecosystem: "maven", Name: "org.bouncycastle:bcprov-jdk15on",
