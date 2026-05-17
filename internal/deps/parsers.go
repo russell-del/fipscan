@@ -478,6 +478,81 @@ func parseComposerLock(path string) ([]ParsedDep, error) {
 }
 
 // ============================================================================
+// build.gradle / build.gradle.kts — Gradle build scripts (Groovy + Kotlin DSL)
+//
+// We match short-notation dependency declarations:
+//
+//   implementation 'org.bouncycastle:bcprov-jdk18on:1.77'
+//   api "org.bouncycastle:bcpkix-jdk18on:1.77"
+//   implementation("org.mindrot:jbcrypt:0.4")   // Kotlin DSL paren style
+//
+// Configuration names covered: implementation, api, compileOnly,
+// runtimeOnly, testImplementation, testRuntimeOnly,
+// androidTestImplementation, kapt, annotationProcessor, classpath,
+// compile (legacy), testCompile (legacy).
+//
+// Not supported in v1.6 (uncommon enough that misses are acceptable;
+// add when a customer reports it):
+//   - Map notation: `implementation group: 'X', name: 'Y', version: 'Z'`
+//   - Variable substitution: `implementation "${var}:..."`
+//   - File / project deps (we naturally skip these — they don't match
+//     the group:artifact:version regex)
+// ============================================================================
+
+// gradleConfigRE matches a line that contains a dep-configuration
+// keyword. gradleCoordRE matches a quoted Maven coordinate anywhere
+// on the line. Splitting in two passes lets us match wrappers like
+// `implementation(platform("group:artifact:version"))` and
+// `api(enforcedPlatform("..."))` that a single anchored regex would
+// miss.
+var (
+	gradleConfigRE = regexp.MustCompile(
+		`\b(?:implementation|api|compileOnly|runtimeOnly|testImplementation|` +
+			`testRuntimeOnly|androidTestImplementation|kapt|annotationProcessor|` +
+			`classpath|compile|testCompile)\b`)
+	gradleCoordRE = regexp.MustCompile(
+		`['"]([A-Za-z0-9._-]+):([A-Za-z0-9._-]+):([A-Za-z0-9._+-]+)['"]`)
+)
+
+func parseGradle(path string) ([]ParsedDep, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var out []ParsedDep
+	s := bufio.NewScanner(f)
+	s.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	lineNum := 0
+	for s.Scan() {
+		lineNum++
+		raw := s.Text()
+		trimmed := strings.TrimSpace(raw)
+		// Cheap comment skip; doesn't handle multi-line /* */ blocks
+		// but those are rare in dep declarations.
+		if strings.HasPrefix(trimmed, "//") || strings.HasPrefix(trimmed, "/*") {
+			continue
+		}
+		if !gradleConfigRE.MatchString(raw) {
+			continue
+		}
+		m := gradleCoordRE.FindStringSubmatch(raw)
+		if m == nil {
+			continue
+		}
+		name := strings.ToLower(m[1] + ":" + m[2]) // group:artifact, matches pom.xml convention
+		out = append(out, ParsedDep{
+			Name:    name,
+			Version: m[3],
+			Line:    lineNum,
+			Snippet: strings.TrimSpace(raw),
+		})
+	}
+	return out, s.Err()
+}
+
+// ============================================================================
 // Pipfile.lock — pipenv lockfile (JSON)
 // ============================================================================
 

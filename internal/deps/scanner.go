@@ -30,6 +30,8 @@ var exactMatchers = map[string]ecosystemSpec{
 	"Cargo.lock":        {"cargo", "Cargo", parseCargoLock},
 	"Gemfile.lock":      {"rubygems", "RubyGems", parseGemfileLock},
 	"composer.lock":     {"composer", "Composer", parseComposerLock},
+	"build.gradle":      {"maven", "Maven (Gradle)", parseGradle},
+	"build.gradle.kts":  {"maven", "Maven (Gradle)", parseGradle},
 }
 
 // suffixMatchers covers extension-based matches (where the filename varies).

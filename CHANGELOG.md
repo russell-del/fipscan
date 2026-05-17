@@ -4,6 +4,71 @@ All notable changes are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project
 uses [Semantic Versioning](https://semver.org/).
 
+## [1.6.0] — Gradle (Groovy DSL + Kotlin DSL)
+
+### Added
+
+- **`build.gradle`** + **`build.gradle.kts`** parsers — closes the
+  JVM ecosystem hole. Captures dep declarations from every standard
+  configuration (`implementation`, `api`, `compileOnly`, `runtimeOnly`,
+  `testImplementation`, `kapt`, `annotationProcessor`, etc.) using
+  short notation:
+
+  ```groovy
+  implementation 'org.bouncycastle:bcprov-jdk18on:1.77'
+  api "org.bouncycastle:bcpkix-jdk18on:1.77"
+  ```
+
+  ```kotlin
+  implementation("org.bouncycastle:bcprov-jdk18on:1.77")
+  implementation(platform("org.springframework.boot:spring-boot-dependencies:3.2.1"))
+  ```
+
+  Gradle deps share the `maven` ecosystem with `pom.xml` — same
+  catalog entries fire (`bcprov-*`, `bcpkix-*`, `jbcrypt`).
+
+- Two-pass regex (config-keyword line filter + coord extraction)
+  handles wrapper forms like `platform(...)` and `enforcedPlatform(...)`.
+- Gradle filenames added to the dedup priority table so they collapse
+  cleanly with `pom.xml` when a project ships both (rare).
+- `internal/deps/gradle_test.go` — Groovy DSL + Kotlin DSL coverage,
+  with assertions that project / file / commented-out deps are
+  correctly skipped.
+
+### Not yet supported
+
+- **Map notation** (`implementation group: 'x', name: 'y', version: 'z'`)
+  — uncommon, will add when a customer reports it.
+- **Gradle Version Catalogs** (`gradle/libs.versions.toml`) — modern
+  multi-module projects increasingly use these. Separate parser, future
+  release.
+- **Variable substitution** (`implementation "$springVer:..."`) — can't
+  resolve without a Groovy/Kotlin interpreter.
+
+### Tested
+
+- Fixtures (`-no-dedup`): 156 → **161** (+5 from Gradle fixtures).
+  Default-deduped total stays at 133 because the Gradle deps overlap
+  exactly with `pom.xml` in the fixture set.
+- Unit tests: `TestParseGradle` + `TestParseGradleKotlinDSL` pass.
+- Real Gradle projects (square/okhttp, mockito/mockito) scan clean
+  end-to-end. apache/kafka surfaces a `pycrypto` from a docker test
+  requirements.txt — an amusing cross-language find from a Java
+  project's docker dir.
+
+### Coverage so far — **14 manifest formats across 8 ecosystems**
+
+| Ecosystem | Formats |
+|---|---|
+| Python (PyPI) | `requirements.txt`, `Pipfile.lock`, `pyproject.toml`, `poetry.lock`, `uv.lock` |
+| Node (npm) | `package-lock.json`, `yarn.lock` |
+| Go | `go.mod` |
+| Java/Maven | `pom.xml`, **`build.gradle`**, **`build.gradle.kts`** |
+| .NET/NuGet | `*.csproj` |
+| Rust/Cargo | `Cargo.lock` |
+| Ruby/RubyGems | `Gemfile.lock` |
+| PHP/Composer | `composer.lock` |
+
 ## [1.5.0] — Cross-manifest dedup
 
 ### Added

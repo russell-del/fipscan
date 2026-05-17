@@ -28,11 +28,13 @@ var manifestPriority = map[string]int{
 	// Ecosystems with a single manifest format (Go, Maven, NuGet,
 	// Cargo, RubyGems, Composer) never collide so priority is moot
 	// but we keep them listed for documentation.
-	"go.mod":       10,
-	"pom.xml":      10,
-	"Cargo.lock":   10,
-	"Gemfile.lock": 10,
-	"composer.lock":10,
+	"go.mod":           10,
+	"pom.xml":          10,
+	"build.gradle":     10,
+	"build.gradle.kts": 10,
+	"Cargo.lock":       10,
+	"Gemfile.lock":     10,
+	"composer.lock":    10,
 }
 
 // Dedup collapses duplicate dependency findings: for each (rule,
