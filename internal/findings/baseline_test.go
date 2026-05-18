@@ -81,6 +81,34 @@ func TestDiff(t *testing.T) {
 		}
 	})
 
+	t.Run("Resolved is the inverse of Diff", func(t *testing.T) {
+		baseline := Baseline{Findings: []Finding{
+			mk("FIPS-DEP-PYPI-001", "uv.lock", "pycrypto 2.6.1"), // FIXED next scan
+			mk("FIPS-DEP-PYPI-003", "uv.lock", "bcrypt 4.0.1"),   // still there
+		}}
+		current := []Finding{
+			mk("FIPS-DEP-PYPI-003", "uv.lock", "bcrypt 4.0.2"),     // version bump, NOT new
+			mk("FIPS-HASH-001", "src/new.py", "MD5"),               // NEW
+		}
+		newOnes := Diff(current, baseline)
+		resolved := Resolved(current, baseline)
+
+		if len(newOnes) != 1 || newOnes[0].Algorithm != "MD5" {
+			t.Errorf("expected 1 new finding (MD5), got %+v", newOnes)
+		}
+		if len(resolved) != 1 || resolved[0].Algorithm != "pycrypto 2.6.1" {
+			t.Errorf("expected 1 resolved finding (pycrypto), got %+v", resolved)
+		}
+	})
+
+	t.Run("Resolved on identical scan is empty", func(t *testing.T) {
+		set := []Finding{mk("FIPS-DEP-PYPI-003", "uv.lock", "bcrypt 4.0.1")}
+		baseline := Baseline{Findings: set}
+		if got := Resolved(set, baseline); len(got) != 0 {
+			t.Errorf("identical scan should resolve 0, got %d", len(got))
+		}
+	})
+
 	t.Run("write then read round-trip", func(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "baseline.json")

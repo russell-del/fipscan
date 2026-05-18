@@ -4,6 +4,51 @@ All notable changes are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project
 uses [Semantic Versioning](https://semver.org/).
 
+## [1.11.0] — `-show-resolved` for baseline diff
+
+### Added
+
+- **`-show-resolved`** flag — when paired with `-baseline <file>`,
+  surfaces findings that were in the baseline but are absent from
+  the current scan (i.e. things that got fixed since the baseline
+  was captured). Terminal and JSON formats only — SARIF and CSAF
+  represent current-state advisories, not deltas, so emit a warning
+  and fall back to "new findings only."
+- New `findings.Resolved(current, baseline)` — symmetric inverse of
+  `findings.Diff`. Two new sub-tests in `baseline_test.go`.
+- New `report.RenderResolved(w, resolved)` — emits a compact
+  "Resolved since baseline" section after the main findings block.
+- New `report.RenderJSONDiff(w, new, resolved, version)` — backwards-
+  compatible JSON shape: `findings` still carries the new findings
+  (existing CI scripts unchanged), `resolved_findings` is an
+  additive field that only appears when `-show-resolved` is on.
+
+### Demonstrated end-to-end
+
+| Step | Result |
+|---|---|
+| Capture baseline of 257 fixture findings | `baseline.json` written |
+| Add `testdata/new_md5.py` (1 new MD5) | + |
+| Remove `testdata/vulnerable.rb` (10 entries) | = scan finds 248 |
+| `fipscan -path testdata -baseline /tmp/bl.json -show-resolved` | `1 new + 10 resolved since baseline` |
+| `-format json` of same | `mode: diff`, `summary.total = 1`, `resolved_summary.total = 10` |
+
+### CI pattern this enables
+
+```yaml
+- name: Diff
+  run: fipscan -path . -baseline baseline.json -show-resolved -format json > diff.json
+- name: Comment on PR
+  run: |
+    new=$(jq .summary.total diff.json)
+    fixed=$(jq .resolved_summary.total diff.json)
+    gh pr comment ${{ github.event.number }} \
+      --body "fipscan: $new new finding(s), $fixed fixed since baseline."
+```
+
+That's the "celebrate progress, surface regressions" loop most
+security tools never get right.
+
 ## [1.10.0] — CSAF 2.0 VEX export + weekly catalog refresh workflow
 
 ### Added

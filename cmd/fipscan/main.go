@@ -27,7 +27,7 @@ import (
 	"github.com/rbuilta/fipscan/internal/source"
 )
 
-const version = "1.10.0"
+const version = "1.11.0"
 
 // knownSubcommands is the dispatch table for `fipscan <subcommand> ...`.
 // Back-compat: if the first argument starts with "-" or is absent, the
@@ -67,6 +67,7 @@ func runScan(args []string) {
 		noDedup       = fs.Bool("no-dedup", false, "Disable cross-manifest dedup. By default, a package flagged in both a lockfile and a declarative manifest produces one finding (from the lockfile).")
 		baselineRead  = fs.String("baseline", "", "Read this baseline file and emit only NEW findings (in the same format chosen by -format).")
 		baselineWrite = fs.String("baseline-write", "", "After scanning, write the full findings list as a baseline JSON file. Use with `-baseline <same-file>` next run to surface only new findings.")
+		showResolved  = fs.Bool("show-resolved", false, "When `-baseline` is set, also emit findings present in the baseline that are absent from the current scan (i.e. things that got fixed). Terminal and JSON formats only.")
 		format        = fs.String("format", "terminal", "Output format: terminal | json | sarif | csaf")
 		failOn        = fs.String("fail-on", "high", "Exit non-zero if findings at or above this severity exist: high | medium | low | none")
 		showV         = fs.Bool("version", false, "Print version and exit")
@@ -164,8 +165,10 @@ func runScan(args []string) {
 	}
 
 	// Baseline-read: filter the scan down to findings that don't
-	// appear in the baseline. Output formatting below sees only the
-	// delta.
+	// appear in the baseline. With -show-resolved we also compute
+	// findings.Resolved (the inverse) so the renderer can surface
+	// "what got fixed since last week".
+	var resolved []findings.Finding
 	if *baselineRead != "" {
 		b, err := findings.ReadBaseline(*baselineRead)
 		if err != nil {
@@ -173,29 +176,55 @@ func runScan(args []string) {
 			os.Exit(2)
 		}
 		before := len(results)
+		if *showResolved {
+			resolved = findings.Resolved(results, b)
+		}
 		results = findings.Diff(results, b)
-		fmt.Fprintf(os.Stderr, "fipscan: %d findings, %d new since baseline (captured %s)\n",
-			before, len(results), b.GeneratedAt.Format("2006-01-02 15:04 MST"))
+		if *showResolved {
+			fmt.Fprintf(os.Stderr, "fipscan: %d findings, %d new + %d resolved since baseline (captured %s)\n",
+				before, len(results), len(resolved), b.GeneratedAt.Format("2006-01-02 15:04 MST"))
+		} else {
+			fmt.Fprintf(os.Stderr, "fipscan: %d findings, %d new since baseline (captured %s)\n",
+				before, len(results), b.GeneratedAt.Format("2006-01-02 15:04 MST"))
+		}
+	}
+	if *showResolved && *baselineRead == "" {
+		fmt.Fprintln(os.Stderr, "fipscan: -show-resolved requires -baseline; ignoring.")
 	}
 
 	switch *format {
 	case "json":
-		if err := report.RenderJSON(os.Stdout, results, version); err != nil {
+		if len(resolved) > 0 || (*showResolved && *baselineRead != "") {
+			if err := report.RenderJSONDiff(os.Stdout, results, resolved, version); err != nil {
+				fmt.Fprintf(os.Stderr, "render error: %v\n", err)
+				os.Exit(2)
+			}
+		} else if err := report.RenderJSON(os.Stdout, results, version); err != nil {
 			fmt.Fprintf(os.Stderr, "render error: %v\n", err)
 			os.Exit(2)
 		}
 	case "sarif":
+		if *showResolved {
+			fmt.Fprintln(os.Stderr, "fipscan: -show-resolved is ignored for -format sarif (SARIF has no resolved-finding concept).")
+		}
 		if err := report.RenderSARIF(os.Stdout, results, version); err != nil {
 			fmt.Fprintf(os.Stderr, "render error: %v\n", err)
 			os.Exit(2)
 		}
 	case "csaf", "csaf-vex":
+		if *showResolved {
+			fmt.Fprintln(os.Stderr, "fipscan: -show-resolved is ignored for -format csaf.")
+		}
 		if err := report.RenderCSAF(os.Stdout, results, version); err != nil {
 			fmt.Fprintf(os.Stderr, "render error: %v\n", err)
 			os.Exit(2)
 		}
 	case "terminal":
 		report.RenderTerminal(os.Stdout, results)
+		if *showResolved && *baselineRead != "" {
+			fmt.Fprintln(os.Stdout)
+			report.RenderResolved(os.Stdout, resolved)
+		}
 	default:
 		fmt.Fprintf(os.Stderr, "unknown format: %s\n", *format)
 		os.Exit(2)

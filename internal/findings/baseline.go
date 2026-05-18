@@ -97,3 +97,20 @@ func Diff(current []Finding, baseline Baseline) []Finding {
 	}
 	return out
 }
+
+// Resolved returns findings from baseline that don't appear in current
+// — i.e. things that got fixed (or whose source disappeared) since the
+// baseline was captured. Symmetric of Diff. Order matches baseline.
+func Resolved(current []Finding, baseline Baseline) []Finding {
+	seen := make(map[string]struct{}, len(current))
+	for _, f := range current {
+		seen[fingerprint(f)] = struct{}{}
+	}
+	out := make([]Finding, 0)
+	for _, f := range baseline.Findings {
+		if _, ok := seen[fingerprint(f)]; !ok {
+			out = append(out, f)
+		}
+	}
+	return out
+}

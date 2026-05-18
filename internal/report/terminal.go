@@ -48,6 +48,32 @@ func RenderTerminal(w io.Writer, results []findings.Finding) {
 	}
 }
 
+// RenderResolved emits a "resolved since baseline" section to w.
+// Designed to be called *after* RenderTerminal of the new-findings
+// list when -show-resolved is on. Compact one-liner per entry —
+// resolved findings are good news, not action items.
+func RenderResolved(w io.Writer, resolved []findings.Finding) {
+	if len(resolved) == 0 {
+		fmt.Fprintln(w, "Resolved since baseline: none.")
+		return
+	}
+	bySev := map[findings.Severity]int{}
+	for _, f := range resolved {
+		bySev[f.Severity]++
+	}
+	fmt.Fprintf(w, "Resolved since baseline — %d finding(s)\n", len(resolved))
+	fmt.Fprintf(w, "  HIGH: %d   MEDIUM: %d   LOW: %d\n\n",
+		bySev[findings.SeverityHigh],
+		bySev[findings.SeverityMedium],
+		bySev[findings.SeverityLow],
+	)
+	for _, f := range resolved {
+		fmt.Fprintf(w, "  ✓ [%s] %s  (was %s:%d, %s)\n",
+			f.Severity, f.Algorithm, f.File, f.Line, f.Rule)
+	}
+	fmt.Fprintln(w)
+}
+
 func sevWeight(s findings.Severity) int {
 	switch s {
 	case findings.SeverityHigh:
