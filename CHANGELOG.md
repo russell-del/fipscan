@@ -4,6 +4,58 @@ All notable changes are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project
 uses [Semantic Versioning](https://semver.org/).
 
+## [1.9.0] — Baseline / diff mode + bigger OSV allowlist
+
+### Added — baseline / diff workflow
+
+- **`-baseline-write <file>`** — after a scan, dump the full findings
+  list to a JSON baseline file.
+- **`-baseline <file>`** — at the end of a scan, emit only findings
+  that **don't appear in the baseline**. Tells a team "what got worse
+  since last time" without drowning them in pre-existing noise.
+- **Fingerprint design** that ignores noise: line shifts don't count
+  as new findings (file path + rule is the key, not file:line); dep
+  version bumps don't either (`bcrypt 4.0.1` → `bcrypt 4.0.2` matches);
+  ELF DT_NEEDED sonames are NOT collapsed (`libcrypto.so.3` is its own
+  finding, distinct from `libssl.so.3`).
+- 6 sub-tests in `internal/findings/baseline_test.go`.
+
+CI integration is now a one-liner:
+
+```yaml
+# .github/workflows/scan.yml
+- name: Capture baseline on main
+  if: github.ref == 'refs/heads/main'
+  run: fipscan -path . -baseline-write baseline.json
+- name: Diff on PR
+  if: github.event_name == 'pull_request'
+  run: fipscan -path . -baseline baseline.json -fail-on high
+```
+
+### Catalog: knownCryptoPackages expanded (214 → 454)
+
+The OSV importer's allowlist of "this package is crypto-relevant"
+grew from ~60 names to ~180 across all 8 ecosystems. Big additions:
+
+| Ecosystem | Before | After | Newly covered (sample) |
+|---|---|---|---|
+| PyPI | 70 | **140** | paramiko, asyncssh, python-jose, authlib, oauthlib, pynacl, ed25519, coincurve |
+| Maven | 46 | **92** | bctls-jdk*, bcutil-jdk*, bcmail-jdk*, bc-fips, com.password4j, com.nimbusds:nimbus-jose-jwt, com.auth0:java-jwt |
+| Go | 33 | **84** | github.com/lestrrat-go/jwx/v2, golang-jwt/jwt/v4..v5, cloudflare/circl, google/tink/go, go-jose, filippo.io/age |
+| npm | 58 | **81** | @noble/curves, @noble/secp256k1, @noble/hashes, openpgp, pkijs, asn1.js, ssh2 |
+| RubyGems | 5 | **34** | net-ssh, ruby-saml, json-jwt, openid_connect, doorkeeper |
+| NuGet | 2 | **23** | Microsoft.IdentityModel.Tokens, IdentityModel, Konscious.Security.Cryptography.Argon2, NSec.Cryptography, NBitcoin.Secp256k1 |
+| Composer | 1 | unchanged | Cargo + Packagist remain sparse — small ecosystem CVE volume |
+
+Total dep catalog: **506** entries (52 manual + 454 OSV-imported).
+
+### Verified
+
+- `make dogfood`: clean
+- `go test ./...`: all 15 sub-tests pass across 4 test files
+- Live baseline demo: 257 → 0 (identical scan), 258 → 1 (new MD5
+  fixture added, only the new one surfaces)
+
 ## [1.8.0] — OSV importer (catalog grows from ~80 → 290+)
 
 ### Added

@@ -27,7 +27,7 @@ import (
 	"github.com/rbuilta/fipscan/internal/source"
 )
 
-const version = "1.8.0"
+const version = "1.9.0"
 
 // knownSubcommands is the dispatch table for `fipscan <subcommand> ...`.
 // Back-compat: if the first argument starts with "-" or is absent, the
@@ -63,11 +63,13 @@ func runScan(args []string) {
 		platform = fs.String("platform", "linux/amd64", "Platform for multi-arch images: os/arch[/variant] (e.g. linux/amd64, linux/arm64, linux/arm/v7)")
 		regUser  = fs.String("registry-username", "", "Registry username for -image (or set FIPSCAN_REGISTRY_USERNAME)")
 		regPass  = fs.String("registry-password", "", "Registry password for -image (or set FIPSCAN_REGISTRY_PASSWORD)")
-		exclude  = fs.String("exclude", "", "Comma-separated list of repo-relative paths to skip (e.g. testdata,vendor)")
-		noDedup  = fs.Bool("no-dedup", false, "Disable cross-manifest dedup. By default, a package flagged in both a lockfile and a declarative manifest produces one finding (from the lockfile).")
-		format   = fs.String("format", "terminal", "Output format: terminal | json | sarif")
-		failOn   = fs.String("fail-on", "high", "Exit non-zero if findings at or above this severity exist: high | medium | low | none")
-		showV    = fs.Bool("version", false, "Print version and exit")
+		exclude       = fs.String("exclude", "", "Comma-separated list of repo-relative paths to skip (e.g. testdata,vendor)")
+		noDedup       = fs.Bool("no-dedup", false, "Disable cross-manifest dedup. By default, a package flagged in both a lockfile and a declarative manifest produces one finding (from the lockfile).")
+		baselineRead  = fs.String("baseline", "", "Read this baseline file and emit only NEW findings (in the same format chosen by -format).")
+		baselineWrite = fs.String("baseline-write", "", "After scanning, write the full findings list as a baseline JSON file. Use with `-baseline <same-file>` next run to surface only new findings.")
+		format        = fs.String("format", "terminal", "Output format: terminal | json | sarif")
+		failOn        = fs.String("fail-on", "high", "Exit non-zero if findings at or above this severity exist: high | medium | low | none")
+		showV         = fs.Bool("version", false, "Print version and exit")
 	)
 	_ = fs.Parse(args)
 
@@ -148,6 +150,32 @@ func runScan(args []string) {
 		if !*noDedup {
 			results = deps.Dedup(results)
 		}
+	}
+
+	// Baseline-write: dump the full scan to a JSON file *before* any
+	// diff filtering, so the captured baseline reflects the full state
+	// of the project at this moment.
+	if *baselineWrite != "" {
+		if err := findings.WriteBaseline(*baselineWrite, version, results); err != nil {
+			fmt.Fprintf(os.Stderr, "baseline write: %v\n", err)
+			os.Exit(2)
+		}
+		fmt.Fprintf(os.Stderr, "fipscan: wrote baseline (%d findings) to %s\n", len(results), *baselineWrite)
+	}
+
+	// Baseline-read: filter the scan down to findings that don't
+	// appear in the baseline. Output formatting below sees only the
+	// delta.
+	if *baselineRead != "" {
+		b, err := findings.ReadBaseline(*baselineRead)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(2)
+		}
+		before := len(results)
+		results = findings.Diff(results, b)
+		fmt.Fprintf(os.Stderr, "fipscan: %d findings, %d new since baseline (captured %s)\n",
+			before, len(results), b.GeneratedAt.Format("2006-01-02 15:04 MST"))
 	}
 
 	switch *format {
