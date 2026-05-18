@@ -29,7 +29,8 @@ VERSION := $(shell awk -F\" '/const version =/ {print $$2}' cmd/fipscan/main.go)
 .PHONY: build release release-fips clean verify dogfood reproducibility-check \
         fips-symbols-check sbom checksums release-all info \
         docker-build docker-run docker-stop \
-        release-matrix docker-buildx homebrew-formula
+        release-matrix docker-buildx homebrew-formula \
+        update-catalog
 
 # Multi-platform release matrix (FIPS-built for every platform).
 PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
@@ -69,7 +70,7 @@ fips-symbols-check:
 # non-FIPS-approved cryptography.
 dogfood: build
 	./bin/fipscan -path . \
-		-exclude testdata,internal/scan/code/patterns.go,internal/deps/data.go,internal/container/catalog.go,internal/server/alerts.go \
+		-exclude testdata,internal/scan/code/patterns.go,internal/deps/data.go,internal/container/catalog.go,internal/server/alerts.go,cmd/fipscan-osv-import,internal/deps/osv_entries.go,internal/osv/osv.go \
 		-fail-on low
 
 # Build twice and compare SHA-256. Reproducibility is the prerequisite for
@@ -152,3 +153,12 @@ docker-buildx:
 homebrew-formula:
 	@./scripts/gen-homebrew-formula.sh "$(VERSION)" > dist/fipscan.rb
 	@echo "wrote dist/fipscan.rb (publish to your homebrew-tap repo)"
+
+# Refresh internal/deps/osv_entries.go from osv.dev's bulk dumps.
+# Downloads each OSV ecosystem ZIP, filters to crypto-relevant CVEs,
+# and writes a new generated Go source file. The output is committed —
+# fipscan is single-binary so the catalog ships with the build.
+update-catalog:
+	$(GO) run ./cmd/fipscan-osv-import > internal/deps/osv_entries.go
+	$(GO) fmt ./internal/deps/osv_entries.go
+	@echo "regenerated internal/deps/osv_entries.go ($(shell wc -l < internal/deps/osv_entries.go) lines)"

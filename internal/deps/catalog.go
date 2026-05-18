@@ -43,15 +43,24 @@ var catalogIndex map[string]map[string][]indexedEntry
 
 func init() {
 	catalogIndex = make(map[string]map[string][]indexedEntry, 8)
-	for _, e := range catalog {
+	indexEntries(catalog)
+	indexEntries(osvCatalog)
+}
+
+// indexEntries adds every entry in src to catalogIndex. Called once
+// for the hand-curated catalog (data.go) and once for the OSV-imported
+// catalog (osv_entries.go); the two sets compose, so manual entries
+// and OSV entries coexist for the same package.
+func indexEntries(src []CatalogEntry) {
+	for _, e := range src {
 		eco := strings.ToLower(e.Ecosystem)
 		if catalogIndex[eco] == nil {
 			catalogIndex[eco] = make(map[string][]indexedEntry)
 		}
 		cs, err := ParseConstraints(e.AffectedVersions)
 		if err != nil {
-			// Malformed AffectedVersions = catalog bug; skip the
-			// entry rather than crash at startup.
+			// Malformed AffectedVersions = catalog bug; skip rather
+			// than crash at startup.
 			continue
 		}
 		key := canonName(e.Name)

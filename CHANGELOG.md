@@ -4,6 +4,57 @@ All notable changes are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project
 uses [Semantic Versioning](https://semver.org/).
 
+## [1.8.0] — OSV importer (catalog grows from ~80 → 290+)
+
+### Added
+
+- **`internal/osv/`** — minimal OSV (osv.dev) schema, downloader, and
+  filter. Stream-extracts the per-ecosystem ZIP bundles published at
+  `osv-vulnerabilities.storage.googleapis.com`. Stdlib only.
+- **`cmd/fipscan-osv-import`** — codegen tool that downloads all 8
+  supported OSV ecosystems (PyPI, npm, Go, Maven, crates.io,
+  RubyGems, Packagist, NuGet), filters to crypto-relevant CVEs, and
+  emits Go source for `internal/deps/osv_entries.go` (committed to
+  the repo — single-binary distribution, no runtime catalog file).
+- **`make update-catalog`** — one-line catalog refresh. Run before a
+  release to pull in new CVEs.
+- **Per-affected-package filtering** — when a CVE is crypto-relevant
+  via keyword match (not package allowlist hit), we emit catalog
+  entries only for packages on the known-crypto allowlist. Stops a
+  CVE that mentions "TLS" once from polluting the catalog with
+  entries for every unrelated package in its affected list.
+- **Word-boundary keyword matching** — surrounding-space lookups so
+  ` tls ` matches but `tlsx` doesn't.
+
+### Catalog growth
+
+| Source | Entries |
+|---|---|
+| Hand-curated (`data.go`) | 52 |
+| **OSV-imported** (`osv_entries.go`) | **214** |
+| Total dep catalog | **266** |
+| Container catalog | 31 (unchanged) |
+| Code pattern matrix | 61 (unchanged) |
+
+OSV breakdown: PyPI 70 · npm 58 · Maven 46 · Go 33 · RubyGems 5 ·
+NuGet 2. Real CVEs: ChaCha20-Poly1305 Terrapin attack
+(GHSA-45x7-px36-x8w8) on `golang.org/x/crypto`, multiple recent
+`cryptography` issues including CVE windows that affect 46.0.x.
+
+### Tuning history
+
+| Attempt | Filter | Entries | Notes |
+|---|---|---|---|
+| 1 | Broad keywords ("key", "encrypt", "random", "verification") | 26,779 | Way too many false positives — XSS, DoS, unaligned-read CVEs leaked in |
+| 2 | **Tight keywords + word boundaries + per-affected-package filter** | **214** | Real crypto CVEs only. False negatives recoverable by adding to the allowlist. |
+
+### Real-world impact
+
+`mitmproxy/mitmproxy` jumped 6 → 16 findings: the OSV import surfaces
+several CVEs against the `cryptography 46.0.4` they currently ship —
+the kind of "your tool just told me about a CVE I didn't know about"
+moment that justifies a paid product.
+
 ## [1.7.0] — Gradle Version Catalogs + pyproject.toml `[project.optional-dependencies]`
 
 ### Added
