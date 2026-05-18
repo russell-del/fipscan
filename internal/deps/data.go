@@ -340,6 +340,20 @@ var catalog = []CatalogEntry{
 		Reference:   "NIST CMVP cert. #4616",
 	},
 	{
+		Ecosystem: "maven", Name: "org.bouncycastle:bcpg-jdk15on",
+		RuleID: "FIPS-DEP-MVN-004", Severity: "MEDIUM",
+		Reason:      "Standard BouncyCastle OpenPGP (bcpg-*) is NOT a FIPS-validated module.",
+		Remediation: "Replace with a FIPS-validated OpenPGP path (Red Hat ships `gpg-pkcs11-scd` for HSM-backed FIPS GPG) or remove the dependency for FIPS deployments.",
+		Reference:   "NIST CMVP cert. #4616",
+	},
+	{
+		Ecosystem: "maven", Name: "org.bouncycastle:bcpg-jdk18on",
+		RuleID: "FIPS-DEP-MVN-004", Severity: "MEDIUM",
+		Reason:      "Standard BouncyCastle OpenPGP (bcpg-*) is NOT a FIPS-validated module.",
+		Remediation: "Replace with a FIPS-validated OpenPGP path or remove the dependency for FIPS deployments.",
+		Reference:   "NIST CMVP cert. #4616",
+	},
+	{
 		Ecosystem: "maven", Name: "org.mindrot:jbcrypt",
 		RuleID: "FIPS-DEP-MVN-003", Severity: "HIGH",
 		Reason:      "jBCrypt implements bcrypt (Blowfish-based), which is not FIPS 140-3 approved.",

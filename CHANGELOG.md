@@ -4,6 +4,51 @@ All notable changes are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project
 uses [Semantic Versioning](https://semver.org/).
 
+## [1.7.0] — Gradle Version Catalogs + pyproject.toml `[project.optional-dependencies]`
+
+### Added
+
+- **`gradle/libs.versions.toml`** parser. Resolves both the `[versions]`
+  table (including Gradle's rich-version forms — `{ strictly = "X" }`,
+  `{ require = "X" }`, `{ prefer = "X" }`) and the `[libraries]` table
+  in every common shape:
+  - `alias = { module = "g:a", version.ref = "name" }`
+  - `alias = { module = "g:a", version = "x" }`
+  - `alias = { group = "g", name = "a", version = "x" }`
+  - `alias = "g:a:v"` (shorthand string form)
+  - Single OR double quotes accepted throughout
+  - `[plugins]` deliberately skipped — plugin coordinates aren't
+    runtime/test deps
+- **`[project.optional-dependencies]` block** in `pyproject.toml`.
+  Single-line (`test = ["pytest"]`) and multi-line array forms both
+  handled. Optional groups get installed when users do
+  `pip install pkg[extras]`, so they're flagged at the same severity
+  as main `dependencies`.
+- **Two new Maven catalog entries** for `org.bouncycastle:bcpg-jdk15on`
+  and `bcpg-jdk18on` (the OpenPGP variant — not FIPS-validated).
+- `libs.versions.toml` priority **20** in the dedup table — for
+  projects that use Version Catalogs, the catalog is the
+  authoritative source (build.gradle.kts only contains aliases).
+- `internal/deps/version_catalog_test.go` — 2 sub-tests covering all
+  library forms + the unresolvable-version.ref fail-safe.
+
+### Verified end-to-end on the real world
+
+- **`bisq-network/bisq`** (multi-module Java/Gradle DEX) now surfaces
+  `org.bouncycastle:bcpg-jdk18on 1.84` from
+  `gradle/libs.versions.toml:64`. v1.6.0 returned 0 deps findings on
+  this repo — the version-catalog parser was the missing piece.
+- Fixtures (`-no-dedup`): 161 → **165** (+3 from gradle catalog
+  fixture, +1 from pyproject optional-dependencies pycrypto).
+- Default-deduped total unchanged at **133** (every new finding is a
+  cross-format dup, correctly collapsed).
+
+### Tests
+
+`internal/deps` now has **6 test files / 13 sub-tests** covering
+version parsing, constraints, dedup, Gradle DSL, Gradle Version
+Catalog, and parser unresolvable-ref edge cases.
+
 ## [1.6.0] — Gradle (Groovy DSL + Kotlin DSL)
 
 ### Added

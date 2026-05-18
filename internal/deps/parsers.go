@@ -115,6 +115,7 @@ func parsePyprojectToml(path string) ([]ParsedDep, error) {
 	s := bufio.NewScanner(f)
 	section := ""
 	inPEP621Deps := false
+	inOptionalDepsArray := false
 	lineNum := 0
 	for s.Scan() {
 		lineNum++
@@ -126,6 +127,7 @@ func parsePyprojectToml(path string) ([]ParsedDep, error) {
 		if strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {
 			section = strings.TrimSpace(strings.Trim(trimmed, "[]"))
 			inPEP621Deps = false
+			inOptionalDepsArray = false
 			continue
 		}
 		if section == "project" {
@@ -157,6 +159,48 @@ func parsePyprojectToml(path string) ([]ParsedDep, error) {
 						Line:    lineNum,
 						Snippet: strings.TrimSpace(raw),
 					})
+				}
+			}
+		}
+		// PEP 621 optional dependency groups, e.g.
+		//   [project.optional-dependencies]
+		//   test = ["pytest"]
+		//   dev = [
+		//     "black",
+		//     "ruff",
+		//   ]
+		// Each group is a key whose value is an array of dep strings.
+		// Optional groups get installed when users do `pip install
+		// pkg[group]`, so for FIPS-readiness purposes they're real
+		// runtime deps and we flag them at the same severity as main.
+		if section == "project.optional-dependencies" {
+			if inOptionalDepsArray {
+				if strings.HasPrefix(trimmed, "]") {
+					inOptionalDepsArray = false
+					continue
+				}
+				for _, m := range pep621EntryRE.FindAllStringSubmatch(trimmed, -1) {
+					out = append(out, ParsedDep{
+						Name:    strings.ToLower(m[1]),
+						Version: cleanVersionSpec(m[2]),
+						Line:    lineNum,
+						Snippet: strings.TrimSpace(raw),
+					})
+				}
+				continue
+			}
+			// Look for `groupname = [...]`
+			if strings.Contains(trimmed, "= [") {
+				for _, m := range pep621EntryRE.FindAllStringSubmatch(trimmed, -1) {
+					out = append(out, ParsedDep{
+						Name:    strings.ToLower(m[1]),
+						Version: cleanVersionSpec(m[2]),
+						Line:    lineNum,
+						Snippet: strings.TrimSpace(raw),
+					})
+				}
+				if !strings.Contains(trimmed, "]") {
+					inOptionalDepsArray = true
 				}
 			}
 		}
@@ -550,6 +594,140 @@ func parseGradle(path string) ([]ParsedDep, error) {
 		})
 	}
 	return out, s.Err()
+}
+
+// ============================================================================
+// gradle/libs.versions.toml — Gradle Version Catalogs (TOML)
+//
+// Format:
+//
+//   [versions]
+//   spring = "3.2.1"
+//   bouncycastle = "1.77"
+//
+//   [libraries]
+//   spring-boot       = { module = "org.springframework.boot:spring-boot-starter", version.ref = "spring" }
+//   bouncycastle-prov = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle" }
+//   bouncycastle-pkix = { group  = "org.bouncycastle", name = "bcpkix-jdk18on", version = "1.77" }
+//   jbcrypt           = { module = "org.mindrot:jbcrypt", version = "0.4" }
+//   mockito           = "org.mockito:mockito-core:5.10.0"    # shorthand string form
+//
+//   [plugins]  # we skip this section
+//
+// The build files (build.gradle.kts) reference these by alias —
+// `implementation(libs.bouncycastle.prov)` — and the regex Gradle
+// parser doesn't resolve those references, so for projects using
+// catalogs the version-catalog file IS the authoritative dep manifest.
+// ============================================================================
+
+// The regexes here accept either single or double quotes (TOML allows
+// both for basic strings) using a character class so we don't depend
+// on regexp backreferences (Go's RE2 doesn't support them).
+var (
+	libCatShortFormRE  = regexp.MustCompile(`^[A-Za-z0-9_.-]+\s*=\s*['"]([A-Za-z0-9._-]+):([A-Za-z0-9._-]+):([A-Za-z0-9._+-]+)['"]`)
+	libCatInlineRE     = regexp.MustCompile(`^[A-Za-z0-9_.-]+\s*=\s*\{(.+)\}`)
+	libCatModuleRE     = regexp.MustCompile(`\bmodule\s*=\s*['"]([A-Za-z0-9._-]+):([A-Za-z0-9._-]+)['"]`)
+	libCatGroupRE      = regexp.MustCompile(`\bgroup\s*=\s*['"]([A-Za-z0-9._-]+)['"]`)
+	libCatNameRE       = regexp.MustCompile(`\bname\s*=\s*['"]([A-Za-z0-9._-]+)['"]`)
+	libCatVersionRefRE = regexp.MustCompile(`\bversion\.ref\s*=\s*['"]([^'"]+)['"]`)
+	libCatVersionRE    = regexp.MustCompile(`\bversion\s*=\s*['"]([^'"]+)['"]`)
+	// Simple "key = value" with optional single OR double quotes.
+	tomlSimpleKVRE = regexp.MustCompile(`^([A-Za-z0-9_.-]+)\s*=\s*['"]([^'"]+)['"]`)
+	// Rich version forms: `name = { strictly = "1.0" }` /
+	// `name = { require = "1.0" }` / `name = { prefer = "1.0" }`.
+	// Gradle's "rich version constraints" — we just take the pinned
+	// version value, ignoring the constraint kind.
+	tomlRichVersionRE = regexp.MustCompile(`^([A-Za-z0-9_.-]+)\s*=\s*\{[^}]*\b(?:strictly|require|prefer)\s*=\s*['"]([^'"]+)['"]`)
+)
+
+func parseGradleVersionCatalog(path string) ([]ParsedDep, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	type libCandidate struct {
+		group, artifact, version, versionRef string
+		line                                 int
+		snippet                              string
+	}
+
+	versions := map[string]string{}
+	var libs []libCandidate
+
+	section := ""
+	lineNum := 0
+	for _, raw := range strings.Split(string(data), "\n") {
+		lineNum++
+		trimmed := strings.TrimSpace(raw)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		if strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {
+			section = strings.TrimSpace(strings.Trim(trimmed, "[]"))
+			continue
+		}
+		switch section {
+		case "versions":
+			if m := tomlSimpleKVRE.FindStringSubmatch(trimmed); m != nil {
+				versions[m[1]] = m[2]
+			} else if m := tomlRichVersionRE.FindStringSubmatch(trimmed); m != nil {
+				// Rich-version forms like `{ strictly = "1.84" }`
+				versions[m[1]] = m[2]
+			}
+		case "libraries":
+			// Shorthand string form: alias = "g:a:v"
+			if m := libCatShortFormRE.FindStringSubmatch(trimmed); m != nil {
+				libs = append(libs, libCandidate{
+					group: m[1], artifact: m[2], version: m[3],
+					line: lineNum, snippet: trimmed,
+				})
+				continue
+			}
+			// Inline table form: alias = { ... }
+			if m := libCatInlineRE.FindStringSubmatch(trimmed); m != nil {
+				inside := m[1]
+				lc := libCandidate{line: lineNum, snippet: trimmed}
+				if mm := libCatModuleRE.FindStringSubmatch(inside); mm != nil {
+					lc.group, lc.artifact = mm[1], mm[2]
+				} else {
+					if mm := libCatGroupRE.FindStringSubmatch(inside); mm != nil {
+						lc.group = mm[1]
+					}
+					if mm := libCatNameRE.FindStringSubmatch(inside); mm != nil {
+						lc.artifact = mm[1]
+					}
+				}
+				// Order matters: version.ref must be tested BEFORE
+				// the plain `version =` regex, which would otherwise
+				// match the `version` prefix of `version.ref`.
+				if mm := libCatVersionRefRE.FindStringSubmatch(inside); mm != nil {
+					lc.versionRef = mm[1]
+				} else if mm := libCatVersionRE.FindStringSubmatch(inside); mm != nil {
+					lc.version = mm[1]
+				}
+				if lc.group != "" && lc.artifact != "" {
+					libs = append(libs, lc)
+				}
+			}
+			// [plugins] and other sections are deliberately ignored
+		}
+	}
+
+	out := make([]ParsedDep, 0, len(libs))
+	for _, lc := range libs {
+		v := lc.version
+		if v == "" && lc.versionRef != "" {
+			v = versions[lc.versionRef]
+		}
+		out = append(out, ParsedDep{
+			Name:    strings.ToLower(lc.group + ":" + lc.artifact),
+			Version: v,
+			Line:    lc.line,
+			Snippet: lc.snippet,
+		})
+	}
+	return out, nil
 }
 
 // ============================================================================

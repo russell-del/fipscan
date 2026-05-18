@@ -32,6 +32,7 @@ var exactMatchers = map[string]ecosystemSpec{
 	"composer.lock":     {"composer", "Composer", parseComposerLock},
 	"build.gradle":      {"maven", "Maven (Gradle)", parseGradle},
 	"build.gradle.kts":  {"maven", "Maven (Gradle)", parseGradle},
+	"libs.versions.toml": {"maven", "Maven (Gradle catalog)", parseGradleVersionCatalog},
 }
 
 // suffixMatchers covers extension-based matches (where the filename varies).

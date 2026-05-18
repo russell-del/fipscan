@@ -1,0 +1,27 @@
+# Gradle Version Catalog — typical multi-module project shape
+[versions]
+spring = "3.2.1"
+bouncycastle = "1.77"
+junit-jupiter = "5.10.0"
+
+[libraries]
+# Module form + version.ref → resolves via [versions]
+spring-boot       = { module = "org.springframework.boot:spring-boot-starter", version.ref = "spring" }
+bouncycastle-prov = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle" }
+
+# group + name form + inline version
+bouncycastle-pkix = { group  = "org.bouncycastle", name = "bcpkix-jdk18on", version = "1.77" }
+
+# Module form + inline version
+jbcrypt           = { module = "org.mindrot:jbcrypt", version = "0.4" }
+
+# Shorthand string form (Gradle 8+ supports this)
+mockito           = "org.mockito:mockito-core:5.10.0"
+
+# Test deps with version.ref
+junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit-jupiter" }
+
+[plugins]
+# Plugins block — we deliberately do NOT scan this; plugin coordinates
+# aren't deps in the runtime/test classpath sense.
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version = "1.9.22" }
