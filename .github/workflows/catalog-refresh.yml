@@ -1,0 +1,93 @@
+# Weekly automated refresh of the OSV-derived catalog
+# (internal/deps/osv_entries.go).
+#
+# Runs `make update-catalog` to download the latest osv.dev bulk dumps,
+# filter to crypto-relevant CVEs, and regenerate the Go source file.
+# If anything changed, opens a PR for human review before merge —
+# auto-merge isn't safe for a security catalog.
+
+name: catalog-refresh
+
+on:
+  schedule:
+    # Monday 06:00 UTC — gives a fresh week of CVE data to review on
+    # Monday morning.
+    - cron: '0 6 * * 1'
+  workflow_dispatch: # manual trigger from the Actions tab
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.3'
+
+      - name: Refresh catalog
+        run: make update-catalog
+
+      - name: Inspect diff
+        id: diff
+        run: |
+          if git diff --quiet -- internal/deps/osv_entries.go; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No catalog changes this week."
+            exit 0
+          fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          # Capture per-ecosystem entry counts from the new file's header.
+          counts=$(sed -n '/^\/\/ Per-ecosystem/,/^$/p' internal/deps/osv_entries.go | tail -n +2 | head -n -1)
+          # Also a one-line stat for the PR body.
+          delta=$(git diff --shortstat -- internal/deps/osv_entries.go)
+          {
+            echo "counts<<EOF"
+            echo "$counts"
+            echo "EOF"
+            echo "delta=$delta"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Open PR
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          date_str=$(date -u +%Y-%m-%d)
+          branch="catalog-refresh/${date_str}"
+          git config user.name  "fipscan-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add internal/deps/osv_entries.go
+          git commit -m "catalog: weekly OSV refresh (${date_str})"
+          git push --set-upstream origin "$branch"
+
+          gh pr create \
+            --title "catalog: weekly OSV refresh (${date_str})" \
+            --base main \
+            --head "$branch" \
+            --body "$(cat <<EOF
+          Automated refresh of \`internal/deps/osv_entries.go\` from osv.dev.
+
+          ## Diff stats
+          \`\`\`
+          ${{ steps.diff.outputs.delta }}
+          \`\`\`
+
+          ## Per-ecosystem entry counts (new file)
+          \`\`\`
+          ${{ steps.diff.outputs.counts }}
+          \`\`\`
+
+          ## Review checklist
+          - [ ] Spot-check 5 random new entries for crypto-relevance (the filter is conservative, not perfect).
+          - [ ] If the diff is suspiciously large (>200% growth), investigate before merging — likely a filter regression.
+          - [ ] If a known crypto package no longer appears, check whether it was removed from \`knownCryptoPackages\` in \`cmd/fipscan-osv-import/main.go\`.
+
+          Regenerate locally: \`make update-catalog\`.
+          EOF
+          )"

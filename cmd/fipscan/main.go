@@ -27,7 +27,7 @@ import (
 	"github.com/rbuilta/fipscan/internal/source"
 )
 
-const version = "1.9.0"
+const version = "1.10.0"
 
 // knownSubcommands is the dispatch table for `fipscan <subcommand> ...`.
 // Back-compat: if the first argument starts with "-" or is absent, the
@@ -67,7 +67,7 @@ func runScan(args []string) {
 		noDedup       = fs.Bool("no-dedup", false, "Disable cross-manifest dedup. By default, a package flagged in both a lockfile and a declarative manifest produces one finding (from the lockfile).")
 		baselineRead  = fs.String("baseline", "", "Read this baseline file and emit only NEW findings (in the same format chosen by -format).")
 		baselineWrite = fs.String("baseline-write", "", "After scanning, write the full findings list as a baseline JSON file. Use with `-baseline <same-file>` next run to surface only new findings.")
-		format        = fs.String("format", "terminal", "Output format: terminal | json | sarif")
+		format        = fs.String("format", "terminal", "Output format: terminal | json | sarif | csaf")
 		failOn        = fs.String("fail-on", "high", "Exit non-zero if findings at or above this severity exist: high | medium | low | none")
 		showV         = fs.Bool("version", false, "Print version and exit")
 	)
@@ -186,6 +186,11 @@ func runScan(args []string) {
 		}
 	case "sarif":
 		if err := report.RenderSARIF(os.Stdout, results, version); err != nil {
+			fmt.Fprintf(os.Stderr, "render error: %v\n", err)
+			os.Exit(2)
+		}
+	case "csaf", "csaf-vex":
+		if err := report.RenderCSAF(os.Stdout, results, version); err != nil {
 			fmt.Fprintf(os.Stderr, "render error: %v\n", err)
 			os.Exit(2)
 		}

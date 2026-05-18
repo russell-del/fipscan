@@ -4,6 +4,49 @@ All notable changes are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project
 uses [Semantic Versioning](https://semver.org/).
 
+## [1.10.0] — CSAF 2.0 VEX export + weekly catalog refresh workflow
+
+### Added
+
+- **`-format csaf`** (alias `csaf-vex`) emits findings as a CSAF 2.0
+  VEX document — the OASIS standard used by CISA, Red Hat, Cisco,
+  Oracle, and most modern gov-adjacent vendors for machine-readable
+  security advisories.
+- Each unique rule maps to one `vulnerabilities[]` entry; affected
+  products are listed in `product_status.known_affected` as Package
+  URLs (`pkg:pypi/...`, `pkg:maven/group/artifact@v`, etc.).
+- OSV-imported CVE rules (`OSV-CVE-...`) populate the CSAF `cve` field;
+  non-CVE rules go in `ids[]` under the fipscan `system_name`.
+- Document tracking carries a per-scan unique ID, an initial+current
+  release timestamp, a one-entry revision history, and a `generator`
+  block naming fipscan + its version. TLP: WHITE by default.
+
+### Added — automation
+
+- **`.github/workflows/catalog-refresh.yml`** — Monday 06:00 UTC cron
+  (and manual-dispatch trigger) that runs `make update-catalog`,
+  diffs the result, and opens a PR with the diff for human review.
+  Auto-merge deliberately off — security catalog needs eyes on every
+  change.
+- PR body carries per-ecosystem entry counts and a reviewer checklist
+  (spot-check N random entries, flag suspicious growth).
+
+### Tested
+
+- Three new unit tests in `internal/report/csaf_test.go`:
+  structural validity (round-trip JSON parse, required CSAF fields
+  present, duplicate-rule entries collapse to one vulnerability),
+  purl construction across all 8 ecosystems, CVE extraction.
+- End-to-end: `fipscan -path testdata/manifests/legacy -format csaf`
+  emits a valid CSAF document with **13 vulnerability entries** for
+  `cryptography 30.0.0` — 1 manual CVE rule + 12 OSV CVE entries,
+  each with a proper `pkg:pypi/cryptography@30.0.0` purl.
+
+### Status snapshot — 4 output formats, 22 unit tests
+
+`fipscan` now emits in: terminal · JSON · SARIF 2.1.0 · CSAF 2.0 VEX.
+All four formats consume the same internal finding model.
+
 ## [1.9.0] — Baseline / diff mode + bigger OSV allowlist
 
 ### Added — baseline / diff workflow
