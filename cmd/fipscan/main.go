@@ -27,7 +27,7 @@ import (
 	"github.com/rbuilta/fipscan/internal/source"
 )
 
-const version = "1.11.0"
+const version = "1.12.0"
 
 // knownSubcommands is the dispatch table for `fipscan <subcommand> ...`.
 // Back-compat: if the first argument starts with "-" or is absent, the
@@ -68,6 +68,8 @@ func runScan(args []string) {
 		baselineRead  = fs.String("baseline", "", "Read this baseline file and emit only NEW findings (in the same format chosen by -format).")
 		baselineWrite = fs.String("baseline-write", "", "After scanning, write the full findings list as a baseline JSON file. Use with `-baseline <same-file>` next run to surface only new findings.")
 		showResolved  = fs.Bool("show-resolved", false, "When `-baseline` is set, also emit findings present in the baseline that are absent from the current scan (i.e. things that got fixed). Terminal and JSON formats only.")
+		showWaived    = fs.Bool("show-waived", false, "Also emit findings that were suppressed by inline `fipscan:waive RULE-ID` comments. Terminal format only.")
+		noColor       = fs.Bool("no-color", false, "Disable ANSI colors in terminal output (also honors the NO_COLOR env var).")
 		format        = fs.String("format", "terminal", "Output format: terminal | json | sarif | csaf")
 		failOn        = fs.String("fail-on", "high", "Exit non-zero if findings at or above this severity exist: high | medium | low | none")
 		showV         = fs.Bool("version", false, "Print version and exit")
@@ -153,6 +155,15 @@ func runScan(args []string) {
 		}
 	}
 
+	// Inline waiver application — happens BEFORE baseline write so
+	// the baseline only captures non-waived findings. Otherwise a
+	// freshly-waived MD5 would still appear in the baseline.
+	var waived []findings.Finding
+	results, waived = findings.ApplyWaivers(results)
+	if len(waived) > 0 {
+		fmt.Fprintf(os.Stderr, "fipscan: %d finding(s) suppressed by inline fipscan:waive comments\n", len(waived))
+	}
+
 	// Baseline-write: dump the full scan to a JSON file *before* any
 	// diff filtering, so the captured baseline reflects the full state
 	// of the project at this moment.
@@ -220,10 +231,14 @@ func runScan(args []string) {
 			os.Exit(2)
 		}
 	case "terminal":
-		report.RenderTerminal(os.Stdout, results)
+		report.RenderTerminal(os.Stdout, results, *noColor)
 		if *showResolved && *baselineRead != "" {
 			fmt.Fprintln(os.Stdout)
-			report.RenderResolved(os.Stdout, resolved)
+			report.RenderResolved(os.Stdout, resolved, *noColor)
+		}
+		if *showWaived && len(waived) > 0 {
+			fmt.Fprintln(os.Stdout)
+			report.RenderWaived(os.Stdout, waived, *noColor)
 		}
 	default:
 		fmt.Fprintf(os.Stderr, "unknown format: %s\n", *format)

@@ -70,7 +70,7 @@ fips-symbols-check:
 # non-FIPS-approved cryptography.
 dogfood: build
 	./bin/fipscan -path . \
-		-exclude testdata,internal/scan/code/patterns.go,internal/deps/data.go,internal/container/catalog.go,internal/server/alerts.go,cmd/fipscan-osv-import,internal/deps/osv_entries.go,internal/osv/osv.go \
+		-exclude testdata,internal/scan/code/patterns.go,internal/deps/data.go,internal/container/catalog.go,internal/server/alerts.go,cmd/fipscan-osv-import,internal/deps/osv_entries.go,internal/osv/osv.go,internal/findings/waiver_test.go \
 		-fail-on low
 
 # Build twice and compare SHA-256. Reproducibility is the prerequisite for

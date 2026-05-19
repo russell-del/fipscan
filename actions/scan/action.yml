@@ -1,0 +1,104 @@
+name: fipscan
+description: FIPS 140-3 readiness scan for source code, dependency manifests, and container images.
+author: rbuilta
+
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  path:
+    description: Local path to scan (relative to the workspace).
+    default: '.'
+  repo:
+    description: GitHub repository to scan as `owner/name` (overrides `path`).
+    default: ''
+  ref:
+    description: Git ref (branch / tag / SHA) when scanning a repo.
+    default: ''
+  image:
+    description: Container image reference to scan (overrides `path` and `repo`).
+    default: ''
+  format:
+    description: 'Output format: terminal | json | sarif | csaf'
+    default: sarif
+  fail-on:
+    description: 'Severity threshold for non-zero exit: high | medium | low | none'
+    default: high
+  baseline:
+    description: Path to a baseline JSON file. When set, only emits findings new since the baseline.
+    default: ''
+  baseline-write:
+    description: After scanning, write a fresh baseline JSON to this path.
+    default: ''
+  show-resolved:
+    description: With `baseline`, also emit findings present in the baseline but absent now.
+    default: 'false'
+  exclude:
+    description: Comma-separated repo-relative paths to skip.
+    default: ''
+  output:
+    description: File to write fipscan output to.
+    default: fipscan-output
+  fipscan-version:
+    description: Container image tag of fipscan to use (e.g. `1.12.0` or `latest`).
+    default: latest
+
+outputs:
+  output:
+    description: Path of the file fipscan wrote its output to.
+    value: ${{ steps.scan.outputs.output }}
+  exit-code:
+    description: fipscan's exit code (0=clean, 1=findings at threshold, 2=error).
+    value: ${{ steps.scan.outputs.exit-code }}
+
+runs:
+  using: composite
+  steps:
+    - id: scan
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        set -uo pipefail
+
+        image="ghcr.io/rbuilta/fipscan:${{ inputs.fipscan-version }}"
+        echo "::group::Pulling $image"
+        docker pull -q "$image"
+        echo "::endgroup::"
+
+        args=(-format "${{ inputs.format }}" -fail-on "${{ inputs.fail-on }}")
+
+        # Target selection — only one of -image / -repo / -path applies.
+        if [ -n "${{ inputs.image }}" ]; then
+          args+=(-image "${{ inputs.image }}")
+        elif [ -n "${{ inputs.repo }}" ]; then
+          args+=(-repo "${{ inputs.repo }}")
+          [ -n "${{ inputs.ref }}" ] && args+=(-ref "${{ inputs.ref }}")
+        else
+          args+=(-path "${{ inputs.path }}")
+        fi
+
+        [ -n "${{ inputs.baseline }}" ] && args+=(-baseline "${{ inputs.baseline }}")
+        [ -n "${{ inputs.baseline-write }}" ] && args+=(-baseline-write "${{ inputs.baseline-write }}")
+        [ "${{ inputs.show-resolved }}" = "true" ] && args+=(-show-resolved)
+        [ -n "${{ inputs.exclude }}" ] && args+=(-exclude "${{ inputs.exclude }}")
+
+        # Run as the workspace owner so output / baseline writes have
+        # correct permissions on the host.
+        uid="$(id -u)"
+        gid="$(id -g)"
+
+        echo "::group::fipscan ${args[*]}"
+        docker run --rm \
+          --user "$uid:$gid" \
+          -v "${{ github.workspace }}:/workspace" \
+          -w /workspace \
+          -e GITHUB_TOKEN \
+          "$image" "${args[@]}" > "${{ inputs.output }}"
+        rc=$?
+        echo "::endgroup::"
+
+        echo "output=${{ inputs.output }}" >> "$GITHUB_OUTPUT"
+        echo "exit-code=$rc" >> "$GITHUB_OUTPUT"
+        exit "$rc"

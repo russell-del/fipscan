@@ -4,6 +4,63 @@ All notable changes are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project
 uses [Semantic Versioning](https://semver.org/).
 
+## [1.12.0] — Inline waivers + colored terminal + GitHub Action wrapper
+
+### Added — inline waivers
+
+- **`fipscan:waive RULE-ID reason="…"`** comment markers in source
+  code suppress matching findings. Comment syntax is irrelevant —
+  works in `//`, `#`, `/* */`, all the languages we scan.
+- A waiver applies when it's on the same line as the finding OR the
+  line immediately above. Rule must match exactly, or use `*` for
+  wildcard suppression of any rule on that line.
+- **`-show-waived`** flag emits the suppressed findings in a separate
+  audit section. Lets reviewers see "what got silenced" without
+  action-item noise.
+- Always-on stderr summary line: `fipscan: N finding(s) suppressed by
+  inline fipscan:waive comments`. Auditors get visibility even when
+  `-show-waived` is off.
+- 7 sub-tests in `waiver_test.go` cover same-line, line-above,
+  wildcard, mismatched rule, container-finding pass-through,
+  multi-finding files, and reason capture.
+
+### Added — colored terminal output
+
+- HIGH = bold red, MEDIUM = bold yellow, LOW = blue, success = green,
+  file paths bold, rule IDs cyan, snippets dim.
+- TTY-aware: colors only emit when stdout is a terminal. Piped output
+  (CI logs, `jq`, files) stays clean.
+- Honors **`NO_COLOR`** env var (https://no-color.org/).
+- **`-no-color`** flag overrides everything.
+
+### Added — GitHub Action wrapper
+
+- `actions/scan/action.yml` — composite action wrapping the
+  `ghcr.io/rbuilta/fipscan` Docker image.
+- 11 inputs covering every CLI mode: path / repo / image scans,
+  baseline workflow, format selection, fail-on threshold,
+  `show-resolved`, `exclude`, pinned version, output path.
+- Outputs `output` (file path) and `exit-code` for downstream steps.
+- `actions/scan/README.md` with quick-start (fail PRs on HIGH +
+  SARIF upload), baseline-diff PR-comment pattern, container scan
+  example.
+- Once a release is tagged, consumers use:
+  `uses: rbuilta/fipscan/actions/scan@v1.12.0`.
+
+### Demonstrated end-to-end
+
+A `/tmp/waiver-demo.py` fixture with 4 MD5/SHA-1 calls:
+
+| line | what | result |
+|---|---|---|
+| 4   | `hashlib.md5(b"approved-use")` with `# fipscan:waive FIPS-HASH-001` line above | waived |
+| 6   | `hashlib.md5(b"not-approved")` with no waiver | **kept** |
+| 8   | `hashlib.sha1(b"x")  # fipscan:waive *` | waived (wildcard) |
+| 10  | `hashlib.md5(b"wrong-rule")` with `# fipscan:waive FIPS-CIPHER-001` BELOW it | **kept** (wrong rule + waiver isn't above) |
+
+Output: `fipscan: 2 finding(s) suppressed by inline fipscan:waive
+comments`, then the 2 surviving findings.
+
 ## [1.11.0] — `-show-resolved` for baseline diff
 
 ### Added
