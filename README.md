@@ -84,39 +84,148 @@ cosign verify-blob \
 
 ---
 
-## CLI usage
+## Scanning guide
+
+Every scan walks **both** source code and dependency manifests in one pass — you don't choose one or the other. Pick the *source* (local path / remote repo / container image) and `fipscan` does the rest.
+
+> The examples below use the `fipscan` binary directly. If you'd rather run via Docker, prefix any command with `docker run --rm ghcr.io/russell-del/fipscan:latest` (and mount the workspace with `-v "$PWD:/src" -w /src` if you're scanning a local path).
+
+### Scan local code
 
 ```sh
-# source code
-fipscan -path ./my-project
-fipscan -path ./my-project -format sarif > fipscan.sarif
+# current directory
+fipscan -path .
 
-# repository (no git binary required — pulls a tarball)
-fipscan -repo paramiko/paramiko                                  # public GitHub
-fipscan -repo owner/name -ref develop -token "$GITHUB_TOKEN"     # private GitHub
-fipscan -repo gitlab-org/cli -repo-platform gitlab               # GitLab
-fipscan -repo atlassian/atlassian-event -repo-platform bitbucket # Bitbucket Cloud
+# a specific project
+fipscan -path ~/code/my-app
 
-# container image (any OCI/Docker v2 registry, no Docker daemon)
-fipscan -image debian:bookworm-slim
-fipscan -image gcr.io/distroless/python3-debian12 -platform linux/arm64
-fipscan -image my-registry.example.com/app:v1.2.3 \
-        -registry-username svc -registry-password "$REG_TOKEN"
+# skip vendored / generated paths (comma-separated, relative to -path)
+fipscan -path . -exclude vendor,third_party,testdata
 
-# CI gating
-fipscan -path . -fail-on high           # exit 1 if any HIGH findings exist
-fipscan -path . -baseline baseline.json # emit only NEW findings vs baseline
+# write JSON for tooling, or SARIF for GitHub Code Scanning
+fipscan -path . -format json  > findings.json
+fipscan -path . -format sarif > fipscan.sarif
 
-# inline waivers — add `// fipscan:waive FIPS-HASH-001 reason="legacy"` near the line
-fipscan -path . -show-waived            # show what was suppressed
+# baseline + diff (CI-friendly): record current state once, then surface only NEW findings
+fipscan -path . -baseline-write baseline.json    # first run — capture the current set
+fipscan -path . -baseline baseline.json          # subsequent runs — show only what's new
+fipscan -path . -baseline baseline.json -show-resolved   # also list what got fixed
 
-# version
-fipscan -version
-# → fipscan 1.12.0
-# → fips140-module: v1.0.0 (enabled=true)
+# CI gate: exit 1 if any HIGH findings exist
+fipscan -path . -fail-on high
+
+# waive a finding inline — drop this comment near the offending line:
+#   // fipscan:waive FIPS-HASH-001 reason="legacy data, scheduled for removal in Q3"
+fipscan -path . -show-waived   # see what was suppressed
 ```
 
-Full flag list: `fipscan -h`.
+Via Docker (mounting the current dir):
+
+```sh
+docker run --rm -v "$PWD:/src" -w /src ghcr.io/russell-del/fipscan:latest -path .
+```
+
+### Scan a GitHub repository
+
+No `git` binary required — `fipscan` pulls the tarball over the GitHub API.
+
+```sh
+# public repo
+fipscan -repo paramiko/paramiko
+
+# specific branch / tag / commit SHA
+fipscan -repo paramiko/paramiko -ref v3.4.0
+fipscan -repo paramiko/paramiko -ref 1a2b3c4d
+
+# private repo — needs a token with `repo` scope
+fipscan -repo my-org/private-app -token "$GITHUB_TOKEN"
+# or set GITHUB_TOKEN in the env and drop the flag
+GITHUB_TOKEN=ghp_xxx fipscan -repo my-org/private-app
+```
+
+### Scan a GitLab project
+
+```sh
+# public project (note the URL-encoded namespace/name in -repo)
+fipscan -repo gitlab-org/cli -repo-platform gitlab
+
+# private project — PAT with `read_api` + `read_repository`
+fipscan -repo my-group/my-project -repo-platform gitlab \
+        -gitlab-token "$GITLAB_TOKEN"
+
+# self-hosted GitLab not supported yet — open an issue if you need it
+```
+
+### Scan a Bitbucket Cloud repository
+
+```sh
+fipscan -repo atlassian/atlassian-event -repo-platform bitbucket
+
+# private repo — Bitbucket app password (Repositories: read)
+fipscan -repo my-team/my-repo -repo-platform bitbucket \
+        -bitbucket-username "$BB_USER" \
+        -bitbucket-password "$BB_APP_PASSWORD"
+```
+
+### Scan a container image
+
+OCI / Docker v2 distribution client built in. **No Docker daemon required** — fipscan talks to the registry directly over HTTPS.
+
+```sh
+# from Docker Hub
+fipscan -image alpine:3.19
+fipscan -image debian:bookworm-slim
+fipscan -image nginx:1.27
+
+# distroless images (no apk/dpkg/rpm — fipscan reads ELF DT_NEEDED)
+fipscan -image gcr.io/distroless/python3-debian12
+
+# multi-arch images — pick a specific platform
+fipscan -image alpine:3.19 -platform linux/arm64
+fipscan -image debian:bookworm-slim -platform linux/arm/v7
+
+# pin by digest for reproducibility
+fipscan -image alpine@sha256:c5b1261d6d3e43071626931fc004f70149baeba2c8ec672bd4f27761f8e1ad6b
+
+# images on GHCR / GCR / Red Hat / etc — registry inferred from the reference
+fipscan -image ghcr.io/owner/app:v1.0.0
+fipscan -image quay.io/prometheus/prometheus:v2.55.0
+fipscan -image registry.access.redhat.com/ubi9/ubi-minimal:9.4
+
+# private registry — basic auth
+fipscan -image my-registry.example.com/app:v1.2.3 \
+        -registry-username svc -registry-password "$REG_TOKEN"
+# or via env: FIPSCAN_REGISTRY_USERNAME / FIPSCAN_REGISTRY_PASSWORD
+```
+
+### Output formats
+
+| Format | Use for |
+|---|---|
+| `terminal` *(default)* | Local dev — colored output (auto-disabled when piped or `NO_COLOR` is set) |
+| `json` | Scripting / custom tooling. Stable schema; `-baseline` + `-show-resolved` emits a `mode: "diff"` envelope. |
+| `sarif` | GitHub Code Scanning — upload with `github/codeql-action/upload-sarif`. |
+| `csaf` | CSAF 2.0 VEX export — for sharing vulnerability status with downstream consumers. |
+
+### CI gating
+
+```sh
+# fail the build on any HIGH finding
+fipscan -path . -fail-on high
+
+# or fail only on NEW high-severity findings vs a tracked baseline
+fipscan -path . -baseline baseline.json -fail-on high
+```
+
+Exit codes: `0` = no findings at/above the `-fail-on` threshold · `1` = findings present · `2` = tool error.
+
+### Full flag list
+
+```sh
+fipscan -h            # scan flags
+fipscan server -h     # server flags
+fipscan hash-password # read a password from stdin, print a PBKDF2 hash
+```
 
 ---
 
