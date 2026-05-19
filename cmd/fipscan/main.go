@@ -51,18 +51,18 @@ func main() {
 func runScan(args []string) {
 	fs := flag.NewFlagSet("scan", flag.ExitOnError)
 	var (
-		path     = fs.String("path", ".", "Local path to scan (directory)")
-		repo     = fs.String("repo", "", "Repository to scan, e.g. owner/name (overrides -path). Used with -repo-platform.")
-		repoPlat = fs.String("repo-platform", "github", "Platform for -repo: github | gitlab | bitbucket")
-		ref      = fs.String("ref", "", "Git ref (branch, tag, or commit SHA) when using -repo (default: repo's default branch)")
-		token    = fs.String("token", "", "GitHub token for -repo (or set GITHUB_TOKEN env var). Required for private GitHub repos.")
-		glToken  = fs.String("gitlab-token", "", "GitLab PAT for -repo when -repo-platform=gitlab (or GITLAB_TOKEN env). Required for private GitLab projects.")
-		bbUser   = fs.String("bitbucket-username", "", "Bitbucket username for -repo when -repo-platform=bitbucket (or BITBUCKET_USERNAME env).")
-		bbPass   = fs.String("bitbucket-password", "", "Bitbucket app password (or BITBUCKET_APP_PASSWORD env).")
-		image    = fs.String("image", "", "Container image reference to scan, e.g. alpine:3.19 or gcr.io/distroless/python3:nonroot")
-		platform = fs.String("platform", "linux/amd64", "Platform for multi-arch images: os/arch[/variant] (e.g. linux/amd64, linux/arm64, linux/arm/v7)")
-		regUser  = fs.String("registry-username", "", "Registry username for -image (or set FIPSCAN_REGISTRY_USERNAME)")
-		regPass  = fs.String("registry-password", "", "Registry password for -image (or set FIPSCAN_REGISTRY_PASSWORD)")
+		path          = fs.String("path", ".", "Local path to scan (directory)")
+		repo          = fs.String("repo", "", "Repository to scan, e.g. owner/name (overrides -path). Used with -repo-platform.")
+		repoPlat      = fs.String("repo-platform", "github", "Platform for -repo: github | gitlab | bitbucket")
+		ref           = fs.String("ref", "", "Git ref (branch, tag, or commit SHA) when using -repo (default: repo's default branch)")
+		token         = fs.String("token", "", "GitHub token for -repo (or set GITHUB_TOKEN env var). Required for private GitHub repos.")
+		glToken       = fs.String("gitlab-token", "", "GitLab PAT for -repo when -repo-platform=gitlab (or GITLAB_TOKEN env). Required for private GitLab projects.")
+		bbUser        = fs.String("bitbucket-username", "", "Bitbucket username for -repo when -repo-platform=bitbucket (or BITBUCKET_USERNAME env).")
+		bbPass        = fs.String("bitbucket-password", "", "Bitbucket app password (or BITBUCKET_APP_PASSWORD env).")
+		image         = fs.String("image", "", "Container image reference to scan, e.g. alpine:3.19 or gcr.io/distroless/python3:nonroot")
+		platform      = fs.String("platform", "linux/amd64", "Platform for multi-arch images: os/arch[/variant] (e.g. linux/amd64, linux/arm64, linux/arm/v7)")
+		regUser       = fs.String("registry-username", "", "Registry username for -image (or set FIPSCAN_REGISTRY_USERNAME)")
+		regPass       = fs.String("registry-password", "", "Registry password for -image (or set FIPSCAN_REGISTRY_PASSWORD)")
 		exclude       = fs.String("exclude", "", "Comma-separated list of repo-relative paths to skip (e.g. testdata,vendor)")
 		noDedup       = fs.Bool("no-dedup", false, "Disable cross-manifest dedup. By default, a package flagged in both a lockfile and a declarative manifest produces one finding (from the lockfile).")
 		baselineRead  = fs.String("baseline", "", "Read this baseline file and emit only NEW findings (in the same format chosen by -format).")
@@ -255,8 +255,10 @@ func runScan(args []string) {
 // setting in the FIPSCAN_AUTH_PASSWORD_HASH environment variable.
 //
 // Usage:
-//   echo -n 'my-secret' | fipscan hash-password
-//   FIPSCAN_AUTH_PASSWORD_HASH=$(echo -n 'my-secret' | fipscan hash-password)
+//
+//	echo -n 'my-secret' | fipscan hash-password
+//	FIPSCAN_AUTH_PASSWORD_HASH=$(echo -n 'my-secret' | fipscan hash-password)
+//
 // requireFIPSMode is the runtime trust-anchor. fipscan refuses to run any
 // scanning, server, or hashing subcommand unless its embedded crypto is
 // the Go 1.26 FIPS 140-3 cryptographic module AND that module is

@@ -36,7 +36,7 @@ func RenderJSON(w io.Writer, results []findings.Finding, version string) error {
 type JSONDiffReport struct {
 	Tool             string             `json:"tool"`
 	Version          string             `json:"version"`
-	Mode             string             `json:"mode"` // "diff"
+	Mode             string             `json:"mode"`              // "diff"
 	Summary          map[string]int     `json:"summary"`           // new-findings summary (existing shape)
 	Findings         []findings.Finding `json:"findings"`          // new findings since baseline
 	ResolvedSummary  map[string]int     `json:"resolved_summary"`  // counts for resolved

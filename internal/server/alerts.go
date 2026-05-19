@@ -56,7 +56,7 @@ func dispatchAlerts(store *Store, target Target, rec ScanRecord, prevScanID, pub
 	}
 
 	var (
-		newOnes []findings.Finding
+		newOnes   []findings.Finding
 		alertType = "new_findings"
 	)
 	if prevScanID == "" {

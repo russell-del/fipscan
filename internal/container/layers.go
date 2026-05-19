@@ -30,10 +30,10 @@ var interesting = map[string]bool{
 }
 
 const (
-	maxFileBytes       = 100 * 1024 * 1024       // per extracted non-ELF file
-	maxELFBytes        = 50 * 1024 * 1024        // per ELF binary buffered for inspection
-	maxLayerBytes      = 2 * 1024 * 1024 * 1024  // 2 GiB per layer (decompressed)
-	maxELFInspections  = 100                     // overall cap per image to bound work
+	maxFileBytes      = 100 * 1024 * 1024      // per extracted non-ELF file
+	maxELFBytes       = 50 * 1024 * 1024       // per ELF binary buffered for inspection
+	maxLayerBytes     = 2 * 1024 * 1024 * 1024 // 2 GiB per layer (decompressed)
+	maxELFInspections = 100                    // overall cap per image to bound work
 )
 
 // ImageFS is the small in-memory representation of an image's relevant

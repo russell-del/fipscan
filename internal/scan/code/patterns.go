@@ -18,9 +18,10 @@ type Pattern struct {
 // across Python, Go, Java, JavaScript/TypeScript, and C#.
 //
 // Severity guide:
-//   HIGH   = algorithm is disallowed under FIPS 140-3 / SP 800-131A Rev. 2
-//   MEDIUM = algorithm is restricted (e.g. SHA-1 disallowed for digital
-//            signatures but permitted in legacy verification contexts)
+//
+//	HIGH   = algorithm is disallowed under FIPS 140-3 / SP 800-131A Rev. 2
+//	MEDIUM = algorithm is restricted (e.g. SHA-1 disallowed for digital
+//	         signatures but permitted in legacy verification contexts)
 var Patterns = []Pattern{
 	// ---- MD5 (FIPS-HASH-001) ---------------------------------------------
 	{

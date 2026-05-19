@@ -7,9 +7,9 @@
 // who need different formats can transform with a one-line jq filter or
 // a Logstash / Vector pipeline:
 //
-//   OCSF: ECS → OCSF crosswalk maintained by the OCSF project
-//   CEF:  echo $json | jq -r '"CEF:0|fipscan|fipscan|\(.service.version)|\(.event.action)|\(.event.action)|3|src=\(.source.ip // "-") suser=\(.user.name // "-") outcome=\(.event.outcome)"'
-//   LEEF: similar one-liner
+//	OCSF: ECS → OCSF crosswalk maintained by the OCSF project
+//	CEF:  echo $json | jq -r '"CEF:0|fipscan|fipscan|\(.service.version)|\(.event.action)|\(.event.action)|3|src=\(.source.ip // "-") suser=\(.user.name // "-") outcome=\(.event.outcome)"'
+//	LEEF: similar one-liner
 //
 // File handling:
 //   - O_APPEND opens are atomic for writes up to PIPE_BUF (~4 KiB on

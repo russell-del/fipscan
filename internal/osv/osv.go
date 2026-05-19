@@ -14,11 +14,11 @@ import (
 // Vulnerability is the subset of the OSV schema (v1.6) we need to
 // convert into a fipscan catalog entry.
 type Vulnerability struct {
-	ID       string      `json:"id"`
-	Summary  string      `json:"summary"`
-	Details  string      `json:"details"`
-	Aliases  []string    `json:"aliases"`
-	Affected []Affected  `json:"affected"`
+	ID         string      `json:"id"`
+	Summary    string      `json:"summary"`
+	Details    string      `json:"details"`
+	Aliases    []string    `json:"aliases"`
+	Affected   []Affected  `json:"affected"`
 	References []Reference `json:"references"`
 }
 
@@ -117,11 +117,11 @@ var (
 
 // IsCryptoRelevant returns true when the vulnerability is plausibly
 // crypto-related. Two paths:
-//   1. ANY affected package is in knownCryptoPackages (clean signal —
-//      a CVE on cryptography / openssl / bouncycastle is always
-//      crypto-relevant regardless of how the summary is phrased).
-//   2. Otherwise, the summary or details contains a strong crypto
-//      keyword (word-boundaried) or phrase.
+//  1. ANY affected package is in knownCryptoPackages (clean signal —
+//     a CVE on cryptography / openssl / bouncycastle is always
+//     crypto-relevant regardless of how the summary is phrased).
+//  2. Otherwise, the summary or details contains a strong crypto
+//     keyword (word-boundaried) or phrase.
 //
 // knownCryptoPackages keys are "<ecosystem>:<name>", both lowercased.
 func (v Vulnerability) IsCryptoRelevant(knownCryptoPackages map[string]bool) bool {

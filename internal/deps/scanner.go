@@ -19,19 +19,19 @@ type ecosystemSpec struct {
 
 // exactMatchers maps a literal filename to its ecosystem + parser.
 var exactMatchers = map[string]ecosystemSpec{
-	"go.mod":            {"go", "Go modules", parseGoMod},
-	"package-lock.json": {"npm", "npm", parsePackageLock},
-	"yarn.lock":         {"npm", "npm", parseYarnLock},
-	"Pipfile.lock":      {"pypi", "PyPI", parsePipfileLock},
-	"pom.xml":           {"maven", "Maven", parsePomXml},
-	"pyproject.toml":    {"pypi", "PyPI", parsePyprojectToml},
-	"poetry.lock":       {"pypi", "PyPI", parsePoetryLock},
-	"uv.lock":           {"pypi", "PyPI", parseUvLock},
-	"Cargo.lock":        {"cargo", "Cargo", parseCargoLock},
-	"Gemfile.lock":      {"rubygems", "RubyGems", parseGemfileLock},
-	"composer.lock":     {"composer", "Composer", parseComposerLock},
-	"build.gradle":      {"maven", "Maven (Gradle)", parseGradle},
-	"build.gradle.kts":  {"maven", "Maven (Gradle)", parseGradle},
+	"go.mod":             {"go", "Go modules", parseGoMod},
+	"package-lock.json":  {"npm", "npm", parsePackageLock},
+	"yarn.lock":          {"npm", "npm", parseYarnLock},
+	"Pipfile.lock":       {"pypi", "PyPI", parsePipfileLock},
+	"pom.xml":            {"maven", "Maven", parsePomXml},
+	"pyproject.toml":     {"pypi", "PyPI", parsePyprojectToml},
+	"poetry.lock":        {"pypi", "PyPI", parsePoetryLock},
+	"uv.lock":            {"pypi", "PyPI", parseUvLock},
+	"Cargo.lock":         {"cargo", "Cargo", parseCargoLock},
+	"Gemfile.lock":       {"rubygems", "RubyGems", parseGemfileLock},
+	"composer.lock":      {"composer", "Composer", parseComposerLock},
+	"build.gradle":       {"maven", "Maven (Gradle)", parseGradle},
+	"build.gradle.kts":   {"maven", "Maven (Gradle)", parseGradle},
 	"libs.versions.toml": {"maven", "Maven (Gradle catalog)", parseGradleVersionCatalog},
 }
 

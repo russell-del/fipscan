@@ -102,11 +102,11 @@ func rulesFromFindings(results []findings.Finding) []sarifRule {
 		}
 		seen[f.Rule] = true
 		rules = append(rules, sarifRule{
-			ID:               f.Rule,
-			Name:             f.Algorithm,
-			ShortDescription: sarifMsg{Text: f.Algorithm + " is not FIPS 140-3 approved."},
-			FullDescription:  sarifMsg{Text: f.Algorithm + " — " + f.Remediation},
-			Help:             sarifMsg{Text: f.Remediation + " Reference: " + f.Reference + "."},
+			ID:                   f.Rule,
+			Name:                 f.Algorithm,
+			ShortDescription:     sarifMsg{Text: f.Algorithm + " is not FIPS 140-3 approved."},
+			FullDescription:      sarifMsg{Text: f.Algorithm + " — " + f.Remediation},
+			Help:                 sarifMsg{Text: f.Remediation + " Reference: " + f.Reference + "."},
 			DefaultConfiguration: sarifConfig{Level: sarifLevel(f.Severity)},
 			Properties: map[string]interface{}{
 				"tags":      []string{"security", "fips140-3", "cryptography"},

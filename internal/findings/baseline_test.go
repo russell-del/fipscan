@@ -87,8 +87,8 @@ func TestDiff(t *testing.T) {
 			mk("FIPS-DEP-PYPI-003", "uv.lock", "bcrypt 4.0.1"),   // still there
 		}}
 		current := []Finding{
-			mk("FIPS-DEP-PYPI-003", "uv.lock", "bcrypt 4.0.2"),     // version bump, NOT new
-			mk("FIPS-HASH-001", "src/new.py", "MD5"),               // NEW
+			mk("FIPS-DEP-PYPI-003", "uv.lock", "bcrypt 4.0.2"), // version bump, NOT new
+			mk("FIPS-HASH-001", "src/new.py", "MD5"),           // NEW
 		}
 		newOnes := Diff(current, baseline)
 		resolved := Resolved(current, baseline)

@@ -9,10 +9,10 @@ func TestParseVersion(t *testing.T) {
 	}{
 		{"1.2.3", Version{1, 2, 3}},
 		{"v1.2.3", Version{1, 2, 3}},
-		{"1.10.0-r1", Version{1, 10, 0}},      // Alpine suffix
-		{"1.10.0-11.el9", Version{1, 10, 0}},  // RHEL release suffix
-		{"3.0.8+abi.7", Version{3, 0, 8}},     // build metadata
-		{"1.0.0-rc.1", Version{1, 0, 0}},      // SemVer pre-release truncated
+		{"1.10.0-r1", Version{1, 10, 0}},     // Alpine suffix
+		{"1.10.0-11.el9", Version{1, 10, 0}}, // RHEL release suffix
+		{"3.0.8+abi.7", Version{3, 0, 8}},    // build metadata
+		{"1.0.0-rc.1", Version{1, 0, 0}},     // SemVer pre-release truncated
 		{">=4.0.0", Version{4, 0, 0}},
 		{"^1.2.3", Version{1, 2, 3}},
 		{"  v1.2  ", Version{1, 2, 0}},
@@ -64,7 +64,7 @@ func TestConstraint(t *testing.T) {
 		{">=1.0,<2.0", "2.0.0", false},
 		{">=1.0,<2.0", "0.9.0", false},
 		// edge cases
-		{"", "1.0.0", true},      // empty = match anything
+		{"", "1.0.0", true}, // empty = match anything
 		{"==1.2.3", "1.2.3", true},
 		{"==1.2.3", "1.2.4", false},
 		{"!=1.2.3", "1.2.3", false},

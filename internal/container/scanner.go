@@ -224,4 +224,3 @@ func selectPlatform(rawIndex []byte, plat registry.Platform) (string, error) {
 	}
 	return "", fmt.Errorf("no %s manifest in image index", plat)
 }
-

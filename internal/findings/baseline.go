@@ -13,7 +13,7 @@ import (
 // against it (`-baseline file.json`) so adopting fipscan on a codebase
 // with 500 existing findings doesn't drown the next PR.
 type Baseline struct {
-	Version     string    `json:"version"`     // fipscan version that wrote this
+	Version     string    `json:"version"` // fipscan version that wrote this
 	GeneratedAt time.Time `json:"generated_at"`
 	Findings    []Finding `json:"findings"`
 }

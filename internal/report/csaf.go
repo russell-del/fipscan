@@ -40,12 +40,12 @@ type csafDoc struct {
 }
 
 type csafDocMeta struct {
-	Category     string           `json:"category"`     // "csaf_vex"
-	CsafVersion  string           `json:"csaf_version"` // "2.0"
+	Category     string            `json:"category"`     // "csaf_vex"
+	CsafVersion  string            `json:"csaf_version"` // "2.0"
 	Distribution *csafDistribution `json:"distribution,omitempty"`
-	Publisher    csafPublisher    `json:"publisher"`
-	Title        string           `json:"title"`
-	Tracking     csafTracking     `json:"tracking"`
+	Publisher    csafPublisher     `json:"publisher"`
+	Title        string            `json:"title"`
+	Tracking     csafTracking      `json:"tracking"`
 }
 
 type csafDistribution struct {
