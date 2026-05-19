@@ -1,6 +1,6 @@
 name: fipscan
 description: FIPS 140-3 readiness scan for source code, dependency manifests, and container images.
-author: rbuilta
+author: russell-del
 
 branding:
   icon: shield
@@ -62,7 +62,7 @@ runs:
       run: |
         set -uo pipefail
 
-        image="ghcr.io/rbuilta/fipscan:${{ inputs.fipscan-version }}"
+        image="ghcr.io/russell-del/fipscan:${{ inputs.fipscan-version }}"
         echo "::group::Pulling $image"
         docker pull -q "$image"
         echo "::endgroup::"

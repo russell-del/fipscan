@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rbuilta/fipscan/internal/findings"
+	"github.com/russell-del/fipscan/internal/findings"
 )
 
 // CSAF 2.0 VEX renderer.

@@ -25,13 +25,13 @@ Outputs: terminal, JSON, **SARIF 2.1.0** (ingested directly by GitHub Code Scann
 
 ```sh
 # Docker (recommended)
-docker run --rm rbuilta/fipscan:latest -image alpine:3.19
+docker run --rm russell-del/fipscan:latest -image alpine:3.19
 
 # Homebrew (macOS / Linux)
-brew install rbuilta/tap/fipscan
+brew install russell-del/tap/fipscan
 
 # Direct binary (Linux / macOS / Windows on amd64 + arm64)
-curl -L -o fipscan https://github.com/rbuilta/fipscan/releases/latest/download/fipscan-$(uname -s | tr A-Z a-z)-$(uname -m)
+curl -L -o fipscan https://github.com/russell-del/fipscan/releases/latest/download/fipscan-$(uname -s | tr A-Z a-z)-$(uname -m)
 chmod +x fipscan
 ```
 
@@ -40,7 +40,7 @@ ships with a CycloneDX SBOM. Verify before installing:
 
 ```sh
 cosign verify-blob \
-  --certificate-identity-regexp '^https://github.com/rbuilta/fipscan' \
+  --certificate-identity-regexp '^https://github.com/russell-del/fipscan' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   --signature fipscan-linux-amd64.sig \
   --certificate fipscan-linux-amd64.crt \
@@ -81,7 +81,7 @@ echo -n 'my-secret' | fipscan hash-password
 docker run -d --name fipscan -p 8080:8080 \
   -e FIPSCAN_AUTH_PASSWORD_HASH='pbkdf2-sha256$600000$...' \
   -v fipscan-data:/var/lib/fipscan \
-  rbuilta/fipscan:latest
+  russell-del/fipscan:latest
 
 # Open http://localhost:8080
 # Username: admin    Password: my-secret

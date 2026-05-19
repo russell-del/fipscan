@@ -3,7 +3,7 @@ package deps
 import (
 	"testing"
 
-	"github.com/rbuilta/fipscan/internal/findings"
+	"github.com/russell-del/fipscan/internal/findings"
 )
 
 func TestDedup(t *testing.T) {

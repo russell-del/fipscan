@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rbuilta/fipscan/internal/findings"
+	"github.com/russell-del/fipscan/internal/findings"
 )
 
 func TestRenderCSAF_StructuralValidity(t *testing.T) {

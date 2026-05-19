@@ -17,14 +17,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rbuilta/fipscan/internal/container"
-	"github.com/rbuilta/fipscan/internal/deps"
-	"github.com/rbuilta/fipscan/internal/findings"
-	"github.com/rbuilta/fipscan/internal/registry"
-	"github.com/rbuilta/fipscan/internal/report"
-	"github.com/rbuilta/fipscan/internal/scan/code"
-	"github.com/rbuilta/fipscan/internal/server"
-	"github.com/rbuilta/fipscan/internal/source"
+	"github.com/russell-del/fipscan/internal/container"
+	"github.com/russell-del/fipscan/internal/deps"
+	"github.com/russell-del/fipscan/internal/findings"
+	"github.com/russell-del/fipscan/internal/registry"
+	"github.com/russell-del/fipscan/internal/report"
+	"github.com/russell-del/fipscan/internal/scan/code"
+	"github.com/russell-del/fipscan/internal/server"
+	"github.com/russell-del/fipscan/internal/source"
 )
 
 const version = "1.12.0"
@@ -274,7 +274,7 @@ func requireFIPSMode() {
 	if ver == "" {
 		fmt.Fprintln(os.Stderr, "fipscan: refusing to start — binary was built without the FIPS 140-3 cryptographic module.")
 		fmt.Fprintln(os.Stderr, "  Build: CGO_ENABLED=0 GOFIPS140=v1.0.0 go build ./cmd/fipscan")
-		fmt.Fprintln(os.Stderr, "  Or pull the prebuilt image: docker pull ghcr.io/rbuilta/fipscan:latest")
+		fmt.Fprintln(os.Stderr, "  Or pull the prebuilt image: docker pull ghcr.io/russell-del/fipscan:latest")
 		os.Exit(2)
 	}
 	if !fips140.Enabled() {

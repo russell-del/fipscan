@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rbuilta/fipscan/internal/findings"
+	"github.com/russell-del/fipscan/internal/findings"
 )
 
 // TargetType identifies what kind of artifact a watchlist entry refers to.

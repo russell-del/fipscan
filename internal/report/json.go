@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/rbuilta/fipscan/internal/findings"
+	"github.com/russell-del/fipscan/internal/findings"
 )
 
 type JSONReport struct {

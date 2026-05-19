@@ -1,3 +1,3 @@
-module github.com/rbuilta/fipscan
+module github.com/russell-del/fipscan
 
 go 1.22

@@ -113,13 +113,13 @@ clean:
 # Build the Docker image (FIPS-built binary on distroless runtime).
 # The image's binary is verified at build time to carry the FIPS module.
 docker-build:
-	docker build -t rbuilta/fipscan:$(VERSION) -t rbuilta/fipscan:latest .
+	docker build -t russell-del/fipscan:$(VERSION) -t russell-del/fipscan:latest .
 
 # Run the image bound to localhost (use `docker-run-network` to expose).
 docker-run:
 	docker run --rm --name fipscan -p 127.0.0.1:8080:8080 \
 		-v fipscan-data:/var/lib/fipscan \
-		rbuilta/fipscan:$(VERSION)
+		russell-del/fipscan:$(VERSION)
 
 docker-stop:
 	-docker stop fipscan 2>/dev/null
@@ -141,7 +141,7 @@ release-matrix:
 
 # Multi-arch image via buildx. Requires `docker buildx create --use` once.
 # Pushes to GHCR; override IMAGE for a different registry.
-IMAGE ?= ghcr.io/rbuilta/fipscan
+IMAGE ?= ghcr.io/russell-del/fipscan
 docker-buildx:
 	docker buildx build \
 	  --platform linux/amd64,linux/arm64 \

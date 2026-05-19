@@ -9,7 +9,7 @@
 
 services:
   fipscan:
-    image: rbuilta/fipscan:0.7.1
+    image: russell-del/fipscan:0.7.1
     # Or build locally if you don't pull from a registry:
     # build: .
     container_name: fipscan

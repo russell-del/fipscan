@@ -6,7 +6,7 @@ import (
 	"os"
 	"sort"
 
-	"github.com/rbuilta/fipscan/internal/findings"
+	"github.com/russell-del/fipscan/internal/findings"
 )
 
 // ANSI color codes used by the terminal renderer. Centralised so it's

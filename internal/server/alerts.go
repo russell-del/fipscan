@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rbuilta/fipscan/internal/audit"
-	"github.com/rbuilta/fipscan/internal/findings"
+	"github.com/russell-del/fipscan/internal/audit"
+	"github.com/russell-del/fipscan/internal/findings"
 )
 
 // Alert payload sent to each AlertDestination. The "text" field is

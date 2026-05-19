@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rbuilta/fipscan/internal/audit"
+	"github.com/russell-del/fipscan/internal/audit"
 )
 
 // PBKDF2 parameters. SHA-256 + 600k iterations follows the current OWASP

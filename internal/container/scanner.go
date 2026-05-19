@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/rbuilta/fipscan/internal/findings"
-	"github.com/rbuilta/fipscan/internal/registry"
+	"github.com/russell-del/fipscan/internal/findings"
+	"github.com/russell-del/fipscan/internal/registry"
 )
 
 // ScanImage pulls the image at the requested platform, streams its layers,

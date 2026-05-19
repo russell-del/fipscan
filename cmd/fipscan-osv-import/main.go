@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rbuilta/fipscan/internal/osv"
+	"github.com/russell-del/fipscan/internal/osv"
 )
 
 // knownCryptoPackages is the union of fipscan's hand-curated package

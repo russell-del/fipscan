@@ -5,13 +5,13 @@
 # Usage: gen-homebrew-formula.sh <version>
 #
 # Publish the resulting file as Formula/fipscan.rb in your homebrew-tap
-# repo (e.g. github.com/rbuilta/homebrew-tap). Users then:
-#   brew tap rbuilta/tap
+# repo (e.g. github.com/russell-del/homebrew-tap). Users then:
+#   brew tap russell-del/tap
 #   brew install fipscan
 
 set -euo pipefail
 VERSION="${1:?usage: gen-homebrew-formula.sh <version>}"
-BASE_URL="https://github.com/rbuilta/fipscan/releases/download/v${VERSION}"
+BASE_URL="https://github.com/russell-del/fipscan/releases/download/v${VERSION}"
 
 sha() {
   shasum -a 256 "dist/$1" 2>/dev/null | awk '{print $1}'
@@ -25,7 +25,7 @@ LI64=$(sha "fipscan-${VERSION}-linux-amd64")
 cat <<RUBY
 class Fipscan < Formula
   desc "FIPS 140-3 readiness scanner for source code, dependency manifests, and container images"
-  homepage "https://github.com/rbuilta/fipscan"
+  homepage "https://github.com/russell-del/fipscan"
   version "${VERSION}"
   license "MIT"
 

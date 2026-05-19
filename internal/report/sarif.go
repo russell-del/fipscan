@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/rbuilta/fipscan/internal/findings"
+	"github.com/russell-del/fipscan/internal/findings"
 )
 
 // SARIF 2.1.0 renderer. Output is consumable by GitHub Code Scanning,
@@ -149,7 +149,7 @@ func RenderSARIF(w io.Writer, results []findings.Finding, version string) error 
 			Tool: sarifTool{Driver: sarifDriver{
 				Name:           "fipscan",
 				Version:        version,
-				InformationURI: "https://github.com/rbuilta/fipscan",
+				InformationURI: "https://github.com/russell-del/fipscan",
 				Rules:          rules,
 			}},
 			Results: sarifResults,

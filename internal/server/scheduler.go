@@ -8,13 +8,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rbuilta/fipscan/internal/audit"
-	"github.com/rbuilta/fipscan/internal/container"
-	"github.com/rbuilta/fipscan/internal/deps"
-	"github.com/rbuilta/fipscan/internal/findings"
-	"github.com/rbuilta/fipscan/internal/registry"
-	"github.com/rbuilta/fipscan/internal/scan/code"
-	"github.com/rbuilta/fipscan/internal/source"
+	"github.com/russell-del/fipscan/internal/audit"
+	"github.com/russell-del/fipscan/internal/container"
+	"github.com/russell-del/fipscan/internal/deps"
+	"github.com/russell-del/fipscan/internal/findings"
+	"github.com/russell-del/fipscan/internal/registry"
+	"github.com/russell-del/fipscan/internal/scan/code"
+	"github.com/russell-del/fipscan/internal/source"
 )
 
 // Scheduler periodically walks the watchlist and runs a scan against any

@@ -33,7 +33,7 @@ using GitHub Actions OIDC. Verify before installing:
 
 ```sh
 cosign verify-blob \
-  --certificate-identity-regexp '^https://github.com/rbuilta/fipscan' \
+  --certificate-identity-regexp '^https://github.com/russell-del/fipscan' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   --signature  <artifact>.sig \
   --certificate <artifact>.crt \

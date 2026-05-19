@@ -36,7 +36,7 @@ uses [Semantic Versioning](https://semver.org/).
 ### Added — GitHub Action wrapper
 
 - `actions/scan/action.yml` — composite action wrapping the
-  `ghcr.io/rbuilta/fipscan` Docker image.
+  `ghcr.io/russell-del/fipscan` Docker image.
 - 11 inputs covering every CLI mode: path / repo / image scans,
   baseline workflow, format selection, fail-on threshold,
   `show-resolved`, `exclude`, pinned version, output path.
@@ -45,7 +45,7 @@ uses [Semantic Versioning](https://semver.org/).
   SARIF upload), baseline-diff PR-comment pattern, container scan
   example.
 - Once a release is tagged, consumers use:
-  `uses: rbuilta/fipscan/actions/scan@v1.12.0`.
+  `uses: russell-del/fipscan/actions/scan@v1.12.0`.
 
 ### Demonstrated end-to-end
 
@@ -639,11 +639,11 @@ so the scanner can register each filename with its own ecosystem
   byte-identical SHA-256.
 - CycloneDX 1.5 SBOM generated per release.
 - **Distroless multi-arch Docker image** at
-  `ghcr.io/rbuilta/fipscan` (linux/amd64, linux/arm64).
+  `ghcr.io/russell-del/fipscan` (linux/amd64, linux/arm64).
 - Cross-platform binaries: linux/amd64, linux/arm64, darwin/amd64,
   darwin/arm64, windows/amd64.
 - Cosign keyless signatures via GitHub Actions OIDC for every artifact.
 - **Dogfooded**: `make dogfood` runs `fipscan` against its own source
   tree and produces zero findings.
 
-[1.0.0]: https://github.com/rbuilta/fipscan/releases/tag/v1.0.0
+[1.0.0]: https://github.com/russell-del/fipscan/releases/tag/v1.0.0

@@ -1,6 +1,6 @@
 # fipscan / Scan Action
 
-GitHub Action wrapping the `fipscan` CLI. Runs in the `ghcr.io/rbuilta/fipscan` Docker image — no separate install step, no caching gymnastics.
+GitHub Action wrapping the `fipscan` CLI. Runs in the `ghcr.io/russell-del/fipscan` Docker image — no separate install step, no caching gymnastics.
 
 ## Quick start — fail PRs on new HIGH findings
 
@@ -15,7 +15,7 @@ jobs:
       security-events: write   # for SARIF upload
     steps:
       - uses: actions/checkout@v4
-      - uses: rbuilta/fipscan/actions/scan@v1.12.0
+      - uses: russell-del/fipscan/actions/scan@v1.12.0
         with:
           path: .
           format: sarif
@@ -30,7 +30,7 @@ jobs:
 ## Baseline / diff for PR comments
 
 ```yaml
-- uses: rbuilta/fipscan/actions/scan@v1.12.0
+- uses: russell-del/fipscan/actions/scan@v1.12.0
   with:
     path: .
     format: json
@@ -58,7 +58,7 @@ jobs:
 ## Scan a container image
 
 ```yaml
-- uses: rbuilta/fipscan/actions/scan@v1.12.0
+- uses: russell-del/fipscan/actions/scan@v1.12.0
   with:
     image: alpine:3.19
     format: csaf
@@ -91,6 +91,6 @@ jobs:
 
 ## Notes
 
-- The action runs fipscan inside its FIPS-built Docker image, so the binary is the same one published at `ghcr.io/rbuilta/fipscan`. No separate binary download.
+- The action runs fipscan inside its FIPS-built Docker image, so the binary is the same one published at `ghcr.io/russell-del/fipscan`. No separate binary download.
 - The action does NOT upload SARIF to GitHub Code Scanning itself — use `github/codeql-action/upload-sarif@v3` as a follow-up step (see the quick-start example).
 - For private OCI registries (when scanning images), set `FIPSCAN_REGISTRY_USERNAME` and `FIPSCAN_REGISTRY_PASSWORD` as workflow secrets and pass through with `env:` on the action step.

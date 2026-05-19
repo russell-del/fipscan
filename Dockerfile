@@ -12,8 +12,8 @@
 #   -buildvcs=false    no VCS stamping
 #   -ldflags="-s -w"   strip symbol table and DWARF
 #
-# Build:    docker build -t rbuilta/fipscan:0.7.1 .
-# Run:      docker run --rm -p 8080:8080 -v fipscan-data:/var/lib/fipscan rbuilta/fipscan:0.7.1
+# Build:    docker build -t russell-del/fipscan:0.7.1 .
+# Run:      docker run --rm -p 8080:8080 -v fipscan-data:/var/lib/fipscan russell-del/fipscan:0.7.1
 
 # ---- build stage --------------------------------------------------------
 # --platform=$BUILDPLATFORM keeps the toolchain on the build host's
@@ -56,7 +56,7 @@ FROM gcr.io/distroless/static-debian12:nonroot
 
 LABEL org.opencontainers.image.title="fipscan"
 LABEL org.opencontainers.image.description="FIPS 140-3 readiness scanner — code, dependency, and container image scanning. Server form factor with embedded UI."
-LABEL org.opencontainers.image.source="https://github.com/rbuilta/fipscan"
+LABEL org.opencontainers.image.source="https://github.com/russell-del/fipscan"
 LABEL org.opencontainers.image.licenses="MIT"
 
 COPY --from=build /out/fipscan /usr/local/bin/fipscan

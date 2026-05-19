@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/rbuilta/fipscan/internal/audit"
+	"github.com/russell-del/fipscan/internal/audit"
 )
 
 // Config controls the server runtime.
