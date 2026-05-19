@@ -1,3 +1,3 @@
 module github.com/russell-del/fipscan
 
-go 1.22
+go 1.26
