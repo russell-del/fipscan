@@ -12,8 +12,8 @@
 #   -buildvcs=false    no VCS stamping
 #   -ldflags="-s -w"   strip symbol table and DWARF
 #
-# Build:    docker build -t russell-del/fipscan:0.7.1 .
-# Run:      docker run --rm -p 8080:8080 -v fipscan-data:/var/lib/fipscan russell-del/fipscan:0.7.1
+# Build:    docker build -t ghcr.io/russell-del/fipscan:dev .
+# Run:      docker run --rm -p 8080:8080 -v fipscan-data:/var/lib/fipscan ghcr.io/russell-del/fipscan:latest
 
 # ---- build stage --------------------------------------------------------
 # --platform=$BUILDPLATFORM keeps the toolchain on the build host's

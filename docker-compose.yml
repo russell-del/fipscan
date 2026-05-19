@@ -1,17 +1,16 @@
-# Minimal docker-compose for fipscan server self-hosting.
+# Self-hosted fipscan server.
 #
-# Usage:
-#   docker compose up -d
-#   open http://localhost:8080
+# 1. Generate a password hash and drop it in a .env file:
+#      echo -n 'pick-a-strong-password' | \
+#        docker run --rm -i ghcr.io/russell-del/fipscan:latest hash-password
+#      echo "FIPSCAN_AUTH_PASSWORD_HASH=pbkdf2-sha256\$600000\$..." > .env
 #
-# To pass GitHub credentials for private repos / private registries:
-#   set them via environment or a .env file (see commented vars below).
+# 2. docker compose up -d
+# 3. open http://localhost:8080  (user: admin)
 
 services:
   fipscan:
-    image: russell-del/fipscan:0.7.1
-    # Or build locally if you don't pull from a registry:
-    # build: .
+    image: ghcr.io/russell-del/fipscan:latest
     container_name: fipscan
     restart: unless-stopped
     ports:
@@ -19,14 +18,22 @@ services:
     volumes:
       - fipscan-data:/var/lib/fipscan
     environment:
-      # Optional — set for private GitHub repo scanning:
+      FIPSCAN_AUTH_PASSWORD_HASH: "${FIPSCAN_AUTH_PASSWORD_HASH:?set in .env — generate with: fipscan hash-password}"
+      # Optional — set FIPSCAN_PUBLIC_URL so alert payloads link to the right hostname:
+      # FIPSCAN_PUBLIC_URL: "https://fipscan.example.com"
+      # Optional — credentials for private repos / registries:
       # GITHUB_TOKEN: "${GITHUB_TOKEN}"
-      # Optional — set for private OCI registries:
+      # GITLAB_TOKEN: "${GITLAB_TOKEN}"
+      # BITBUCKET_USERNAME: "${BITBUCKET_USERNAME}"
+      # BITBUCKET_APP_PASSWORD: "${BITBUCKET_APP_PASSWORD}"
       # FIPSCAN_REGISTRY_USERNAME: "${REG_USERNAME}"
       # FIPSCAN_REGISTRY_PASSWORD: "${REG_PASSWORD}"
-      # Optional — required once Phase-2 auth lands:
-      # FIPSCAN_AUTH_PASSWORD_HASH: "${FIPSCAN_AUTH_PASSWORD_HASH}"
       TZ: UTC
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/fipscan", "-version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
 volumes:
   fipscan-data:
